@@ -4,9 +4,15 @@ import { Routes } from '../../constants';
 import { RootStackParamList } from '../../types';
 
 import HomeScreen from '../../modules/Home/HomeScreen';
+import AlarmsScreen from '../../modules/Alarms/AlarmsList/AlarmsScreen';
 import CreateAlarmScreen from '../../modules/Alarms/CreateAlarm/CreateAlarmScreen';
 import AlarmRingingScreen from '../../modules/Alarms/AlarmRinging/AlarmRingingScreen';
 import ChallengeScreen from '../../modules/Challenges/ChallengeScreen';
+import GamesHubScreen from '../../modules/Games/GamesHubScreen';
+import KnifeGameScreen from '../../modules/Games/KnifeGameScreen';
+import HockeyGameScreen from '../../modules/Games/HockeyGameScreen';
+import StackGameScreen from '../../modules/Games/StackGameScreen';
+import PongGameScreen from '../../modules/Games/PongGameScreen';
 import SuccessScreen from '../../modules/Result/Success/SuccessScreen';
 import FailureScreen from '../../modules/Result/Failure/FailureScreen';
 
@@ -21,6 +27,7 @@ const RootStack: FC = () => {
         animation: 'slide_from_right',
       }}>
       <Stack.Screen name={Routes.home} component={HomeScreen} />
+      <Stack.Screen name={Routes.alarms} component={AlarmsScreen} />
       <Stack.Screen
         name={Routes.createAlarm}
         component={CreateAlarmScreen}
@@ -35,6 +42,31 @@ const RootStack: FC = () => {
         name={Routes.challenge}
         component={ChallengeScreen}
         options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name={Routes.gamesHub}
+        component={GamesHubScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name={Routes.knifeGame}
+        component={KnifeGameScreen}
+        options={{ animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name={Routes.hockeyGame}
+        component={HockeyGameScreen}
+        options={{ animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name={Routes.stackGame}
+        component={StackGameScreen}
+        options={{ animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name={Routes.pongGame}
+        component={PongGameScreen}
+        options={{ animation: 'slide_from_bottom' }}
       />
       <Stack.Screen
         name={Routes.success}

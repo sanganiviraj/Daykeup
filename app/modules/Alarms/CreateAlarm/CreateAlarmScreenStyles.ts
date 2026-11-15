@@ -1,543 +1,558 @@
 import { StyleSheet } from 'react-native';
 import { Colors } from '../../../theme/Colors';
-import { verticalScale, horizontalScale, moderateScale } from '../../../theme/Metrics';
+import { horizontalScale, moderateScale, verticalScale } from '../../../theme/Metrics';
 
 export const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
   contentContainer: {
-    paddingHorizontal: horizontalScale(16),
+    paddingHorizontal: horizontalScale(18),
+    paddingTop: verticalScale(12),
     paddingBottom: verticalScale(40),
   },
-  // Header Actions
-  headerSaveBtn: {
-    backgroundColor: Colors.azure,
-    paddingHorizontal: horizontalScale(14),
-    paddingVertical: verticalScale(6),
+
+  // Rest Calculated Pill
+  restPillContainer: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: verticalScale(12),
+  },
+  restPillIcon: {
+    marginRight: horizontalScale(6),
+  },
+  restPillText: {
+    fontSize: moderateScale(13),
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+
+  // Card Base
+  sectionCard: {
+    backgroundColor: Colors.white,
     borderRadius: verticalScale(16),
+    padding: verticalScale(16),
+    borderWidth: 1,
+    borderColor: Colors.grayBorder,
+    marginBottom: verticalScale(12),
   },
-  headerSaveText: {
-    color: Colors.white,
-    fontSize: moderateScale(12),
-    fontWeight: '800',
-  },
-  headerCancelBtn: {
-    paddingHorizontal: horizontalScale(10),
-    paddingVertical: verticalScale(6),
-    marginRight: horizontalScale(4),
-  },
-  headerCancelText: {
-    color: Colors.textMuted,
-    fontSize: moderateScale(12),
-    fontWeight: '700',
-  },
-  // Status Row
-  statusRow: {
+
+  // Time Adjuster Card
+  timeAdjusterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: horizontalScale(8),
   },
-  questSetupPill: {
-    backgroundColor: Colors.azureLight,
-    borderWidth: verticalScale(1),
-    borderColor: 'rgba(6, 127, 242, 0.2)',
-    paddingHorizontal: horizontalScale(10),
-    paddingVertical: verticalScale(4),
-    borderRadius: verticalScale(12),
+  timeStepBtn: {
+    width: verticalScale(44),
+    height: verticalScale(44),
+    borderRadius: verticalScale(22),
+    backgroundColor: Colors.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeDisplayCenter: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
   },
-  questSetupText: {
-    color: Colors.azure,
-    fontSize: moderateScale(10),
-    fontWeight: '800',
-    letterSpacing: horizontalScale(0.8),
+  timeDigitsText: {
+    fontSize: moderateScale(48),
+    fontWeight: '700',
+    color: Colors.textDark,
+    letterSpacing: -horizontalScale(1),
   },
-  heroModePill: {
-    backgroundColor: Colors.jonquilLight,
-    borderWidth: verticalScale(1),
-    borderColor: 'rgba(246, 205, 27, 0.4)',
-    paddingHorizontal: horizontalScale(10),
-    paddingVertical: verticalScale(4),
-    borderRadius: verticalScale(12),
+  periodText: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    color: Colors.onSurfaceVariant,
+    marginLeft: horizontalScale(6),
   },
-  heroModeText: {
-    color: '#8A6D00',
-    fontSize: moderateScale(10),
-    fontWeight: '800',
-  },
-  // Wake Horizon Card
-  horizonCard: {
-    backgroundColor: Colors.white,
-    borderRadius: verticalScale(20),
-    padding: verticalScale(20),
-    alignItems: 'center',
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
-    shadowColor: Colors.azure,
-    shadowOffset: { width: 0, height: verticalScale(4) },
-    shadowOpacity: 0.08,
-    shadowRadius: verticalScale(12),
-    elevation: 3,
-    marginBottom: verticalScale(16),
-  },
-  horizonLabel: {
-    fontSize: moderateScale(11),
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: horizontalScale(1.2),
-    textTransform: 'uppercase',
-  },
-  timePickerRow: {
+  quickChipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: verticalScale(12),
+    marginTop: verticalScale(12),
   },
-  timeBigDigit: {
-    fontSize: moderateScale(56),
-    fontWeight: '800',
-    color: Colors.textMain,
-    lineHeight: moderateScale(60),
-  },
-  timeColon: {
-    fontSize: moderateScale(56),
-    fontWeight: '800',
-    color: Colors.azure,
-    lineHeight: moderateScale(60),
+  quickChipBtn: {
+    backgroundColor: Colors.surfaceContainer,
+    paddingHorizontal: horizontalScale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: verticalScale(14),
     marginHorizontal: horizontalScale(4),
   },
-  periodToggleContainer: {
-    backgroundColor: '#F1F5F9',
-    padding: verticalScale(3),
-    borderRadius: verticalScale(10),
-    marginLeft: horizontalScale(12),
+  quickChipText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: Colors.onSurfaceVariant,
   },
-  periodButton: {
-    paddingHorizontal: horizontalScale(8),
-    paddingVertical: verticalScale(3),
-    borderRadius: verticalScale(7),
+
+  // Alarm Label Field
+  fieldLabel: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: Colors.onSurfaceVariant,
+    marginBottom: verticalScale(6),
   },
-  periodButtonActive: {
-    backgroundColor: Colors.azure,
-  },
-  periodButtonText: {
-    fontSize: moderateScale(11),
-    fontWeight: '800',
-    color: Colors.textMuted,
-  },
-  periodButtonTextActive: {
-    color: Colors.white,
-  },
-  scrubbersRow: {
+  inputBox: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: verticalScale(14),
+    paddingHorizontal: horizontalScale(12),
+    paddingVertical: verticalScale(10),
+    borderWidth: 1,
+    borderColor: Colors.transparent,
+    marginBottom: verticalScale(16),
+  },
+  inputIcon: {
+    marginRight: horizontalScale(8),
+  },
+  textInputField: {
+    flex: 1,
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: Colors.textDark,
+    padding: 0,
+  },
+
+  // Repeat Schedule
+  repeatHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(10),
+  },
+  repeatScheduleTitle: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: Colors.onSurfaceVariant,
+  },
+  repeatScheduleValue: {
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: Colors.brandOrange,
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dayChip: {
+    width: verticalScale(38),
+    height: verticalScale(38),
+    borderRadius: verticalScale(19),
+    backgroundColor: Colors.surfaceContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: verticalScale(8),
   },
-  scrubberBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: horizontalScale(12),
-    paddingVertical: verticalScale(6),
-    borderRadius: verticalScale(14),
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
+  dayChipSelected: {
+    backgroundColor: Colors.brandOrange,
   },
-  scrubberBtnText: {
-    fontSize: moderateScale(11),
+  dayChipText: {
+    fontSize: moderateScale(13),
     fontWeight: '700',
-    color: Colors.textMain,
+    color: Colors.onSurfaceVariant,
   },
-  restBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.azureLight,
-    paddingHorizontal: horizontalScale(12),
-    paddingVertical: verticalScale(6),
-    borderRadius: verticalScale(14),
-    marginHorizontal: horizontalScale(8),
-    borderWidth: verticalScale(1),
-    borderColor: 'rgba(6, 127, 242, 0.2)',
+  dayChipTextSelected: {
+    color: Colors.white,
   },
-  restBadgeText: {
-    fontSize: moderateScale(11),
-    fontWeight: '700',
-    color: Colors.azure,
-    marginLeft: horizontalScale(4),
-  },
-  // Repeat Rhythm
-  repeatCard: {
-    backgroundColor: Colors.white,
-    borderRadius: verticalScale(18),
-    padding: verticalScale(16),
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
-    marginBottom: verticalScale(16),
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: verticalScale(2) },
-    shadowOpacity: 0.04,
-    shadowRadius: verticalScale(6),
-    elevation: 2,
-  },
-  sectionRowBetween: {
+
+  // Motivation Card
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: verticalScale(12),
   },
-  cardSectionTitle: {
+  cardHeaderTitle: {
     fontSize: moderateScale(15),
-    fontWeight: '800',
-    color: Colors.textMain,
+    fontWeight: '700',
+    color: Colors.textDark,
   },
-  activeDaysBadge: {
-    backgroundColor: Colors.azureLight,
-    paddingHorizontal: horizontalScale(10),
-    paddingVertical: verticalScale(3),
-    borderRadius: verticalScale(10),
+  actionTextBtn: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: Colors.brandOrange,
   },
-  activeDaysBadgeText: {
-    fontSize: moderateScale(10),
-    fontWeight: '800',
-    color: Colors.azure,
+  visionImageBox: {
+    height: verticalScale(140),
+    borderRadius: verticalScale(16),
+    backgroundColor: Colors.gradientDark,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+    padding: verticalScale(12),
   },
-  daysRow: {
+  visionImageOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  visionOverlayBottom: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
   },
-  dayCircle: {
-    width: verticalScale(40),
-    height: verticalScale(40),
-    borderRadius: verticalScale(20),
-    backgroundColor: Colors.dune,
+  wakeIntentionTag: {
+    fontSize: moderateScale(11),
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  quoteText: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: Colors.white,
+    marginTop: verticalScale(2),
+  },
+
+  // Wake-Up Challenge Section
+  cardHeaderSubtitle: {
+    fontSize: moderateScale(12),
+    color: Colors.textMuted,
+    marginTop: verticalScale(2),
+  },
+  challengesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(12),
+  },
+  challengeCard: {
+    width: '48.5%',
+    backgroundColor: Colors.white,
+    borderRadius: verticalScale(12),
+    borderWidth: 1,
+    borderColor: Colors.grayBorder,
+    paddingHorizontal: horizontalScale(10),
+    paddingVertical: verticalScale(10),
+    marginBottom: verticalScale(10),
+  },
+  challengeCardSelected: {
+    backgroundColor: Colors.brandOrangeLight,
+    borderColor: Colors.brandOrange,
+  },
+  challengeCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(6),
+  },
+  challengeIconBox: {
+    width: verticalScale(34),
+    height: verticalScale(34),
+    borderRadius: verticalScale(10),
+    backgroundColor: Colors.brandOrangeLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayCircleActive: {
-    backgroundColor: Colors.azure,
-    shadowColor: Colors.azure,
-    shadowOffset: { width: 0, height: verticalScale(2) },
-    shadowOpacity: 0.3,
-    shadowRadius: verticalScale(6),
-    elevation: 3,
+  challengeIconBoxSelected: {
+    backgroundColor: Colors.brandOrange,
   },
-  dayText: {
-    fontSize: moderateScale(13),
-    fontWeight: '800',
-    color: Colors.textMuted,
-  },
-  dayTextActive: {
-    color: Colors.white,
-  },
-  // Motivation Section
-  sectionHeaderLabelRow: {
-    flexDirection: 'row',
+  challengeCheckCircle: {
+    width: horizontalScale(18),
+    height: verticalScale(18),
+    borderRadius: verticalScale(9),
+    borderWidth: 1.5,
+    borderColor: Colors.grayBorder,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: horizontalScale(2),
-    marginBottom: verticalScale(10),
-  },
-  sectionTitleMain: {
-    fontSize: moderateScale(16),
-    fontWeight: '800',
-    color: Colors.textMain,
-  },
-  xpPlusBadge: {
-    backgroundColor: Colors.melonLight,
-    borderWidth: verticalScale(1),
-    borderColor: 'rgba(255, 167, 143, 0.3)',
-    paddingHorizontal: horizontalScale(8),
-    paddingVertical: verticalScale(2),
-    borderRadius: verticalScale(10),
-  },
-  xpPlusText: {
-    fontSize: moderateScale(11),
-    fontWeight: '800',
-    color: Colors.melon,
-  },
-  visionBoxCard: {
+    justifyContent: 'center',
     backgroundColor: Colors.white,
-    borderRadius: verticalScale(18),
-    padding: verticalScale(14),
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
-    marginBottom: verticalScale(16),
   },
-  visionPhotoPlaceholder: {
-    height: verticalScale(140),
-    borderRadius: verticalScale(14),
-    backgroundColor: '#1E293B',
-    position: 'relative',
-    overflow: 'hidden',
-    justifyContent: 'space-between',
-    padding: verticalScale(10),
+  challengeCheckCircleSelected: {
+    backgroundColor: Colors.brandOrange,
+    borderColor: Colors.brandOrange,
   },
-  visionPhotoBg: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#334155',
+  challengeMetaBox: {
+    justifyContent: 'center',
   },
-  visionTagTopLeft: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: horizontalScale(8),
-    paddingVertical: verticalScale(4),
-    borderRadius: verticalScale(10),
-    alignSelf: 'flex-start',
+  challengeTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginBottom: verticalScale(2),
   },
-  visionTagText: {
-    fontSize: moderateScale(10),
-    fontWeight: '800',
-    color: Colors.textMain,
+  challengeTitleSelected: {
+    color: Colors.textDark,
   },
-  visionPhotoBottomRow: {
+  challengeSubtitle: {
+    fontSize: moderateScale(11),
+    fontWeight: '500',
+    color: Colors.onSurfaceVariant,
+  },
+  challengeSubtitleSelected: {
+    color: Colors.textSecondary,
+  },
+
+  // Difficulty Selector
+  difficultyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: verticalScale(2),
+    marginBottom: verticalScale(12),
   },
-  visionTitleText: {
+  difficultyLabel: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: Colors.onSurfaceVariant,
+  },
+  difficultySegment: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: verticalScale(16),
+    padding: verticalScale(2),
+  },
+  diffBtn: {
+    paddingHorizontal: horizontalScale(14),
+    paddingVertical: verticalScale(5),
+    borderRadius: verticalScale(14),
+  },
+  diffBtnSelected: {
+    backgroundColor: Colors.brandOrange,
+  },
+  diffBtnText: {
+    fontSize: moderateScale(11),
+    fontWeight: '600',
+    color: Colors.onSurfaceVariant,
+  },
+  diffBtnTextSelected: {
     color: Colors.white,
-    fontSize: moderateScale(13),
     fontWeight: '700',
   },
-  quoteBox: {
-    backgroundColor: Colors.lavenderLight,
-    borderRadius: verticalScale(12),
-    padding: verticalScale(12),
-    marginTop: verticalScale(12),
-    borderWidth: verticalScale(1),
-    borderColor: 'rgba(254, 191, 115, 0.4)',
-  },
-  quoteBoxText: {
-    fontSize: moderateScale(13),
-    fontStyle: 'italic',
-    fontWeight: '600',
-    color: Colors.textMain,
-    lineHeight: moderateScale(18),
-  },
-  quoteMantraTag: {
-    fontSize: moderateScale(9),
-    fontWeight: '800',
-    color: Colors.melon,
-    marginTop: verticalScale(4),
-    textTransform: 'uppercase',
-  },
-  // Challenge Selector
-  challengeCardOption: {
+
+  // Puzzle Preview Bar
+  puzzlePreviewBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.white,
-    borderRadius: verticalScale(16),
-    padding: verticalScale(14),
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
-    marginBottom: verticalScale(10),
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: verticalScale(12),
+    paddingHorizontal: horizontalScale(12),
+    paddingVertical: verticalScale(10),
   },
-  challengeCardOptionSelected: {
-    borderColor: Colors.azure,
-    borderWidth: verticalScale(2),
-    shadowColor: Colors.azure,
-    shadowOffset: { width: 0, height: verticalScale(4) },
-    shadowOpacity: 0.12,
-    shadowRadius: verticalScale(8),
-    elevation: 3,
-  },
-  challengeLeftCol: {
+  puzzlePreviewLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginRight: horizontalScale(8),
   },
-  challengeIconCircle: {
+  puzzleTimerIcon: {
+    marginRight: horizontalScale(8),
+  },
+  puzzleEquationText: {
+    flex: 1,
+    fontSize: moderateScale(13),
+    color: Colors.textSecondary,
+    lineHeight: moderateScale(18),
+  },
+  timeLimitText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+
+  // Sound & Physical Affordances
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: verticalScale(6),
+  },
+  settingRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingIconCircle: {
     width: verticalScale(40),
     height: verticalScale(40),
     borderRadius: verticalScale(12),
-    backgroundColor: Colors.azure,
+    backgroundColor: Colors.brandOrangeLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: horizontalScale(12),
   },
-  challengeIconCircleInactive: {
-    backgroundColor: '#F1F5F9',
+  settingIconCircleGray: {
+    backgroundColor: Colors.surfaceContainer,
   },
-  challengeTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  challengeTitle: {
-    fontSize: moderateScale(14),
-    fontWeight: '800',
-    color: Colors.textMain,
-  },
-  challengeActiveBadge: {
-    backgroundColor: Colors.melon,
-    paddingHorizontal: horizontalScale(6),
-    paddingVertical: verticalScale(2),
-    borderRadius: verticalScale(8),
-    marginLeft: horizontalScale(6),
-  },
-  challengeActiveBadgeText: {
-    color: Colors.white,
-    fontSize: moderateScale(9),
-    fontWeight: '800',
-  },
-  challengeDesc: {
-    fontSize: moderateScale(11),
-    color: Colors.textMuted,
-    marginTop: verticalScale(2),
-  },
-  challengeRadioCircle: {
-    width: verticalScale(22),
-    height: verticalScale(22),
-    borderRadius: verticalScale(11),
-    backgroundColor: Colors.azure,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  challengeRadioCircleInactive: {
-    backgroundColor: 'transparent',
-    borderWidth: verticalScale(2),
-    borderColor: Colors.dune,
-  },
-  // Intensity
-  intensityCard: {
-    backgroundColor: Colors.white,
-    borderRadius: verticalScale(18),
-    padding: verticalScale(16),
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
-    marginBottom: verticalScale(16),
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: verticalScale(20),
-    padding: verticalScale(3),
-    marginTop: verticalScale(10),
-  },
-  segmentedBtn: {
-    flex: 1,
-    paddingVertical: verticalScale(8),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: verticalScale(18),
-  },
-  segmentedBtnActive: {
-    backgroundColor: Colors.azure,
-    shadowColor: Colors.azure,
-    shadowOffset: { width: 0, height: verticalScale(2) },
-    shadowOpacity: 0.25,
-    shadowRadius: verticalScale(4),
-    elevation: 3,
-  },
-  segmentedBtnText: {
-    fontSize: moderateScale(12),
-    fontWeight: '700',
-    color: Colors.textMuted,
-  },
-  segmentedBtnTextActive: {
-    color: Colors.white,
-    fontWeight: '800',
-  },
-  // Snooze Penalty Row
-  snoozeCard: {
-    backgroundColor: Colors.white,
-    borderRadius: verticalScale(18),
-    padding: verticalScale(16),
-    borderWidth: verticalScale(1),
-    borderColor: Colors.borderSubtle,
-    marginBottom: verticalScale(20),
-  },
-  snoozePenaltyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  snoozeLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  warningIconBox: {
-    width: verticalScale(36),
-    height: verticalScale(36),
-    borderRadius: verticalScale(10),
-    backgroundColor: Colors.melonLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: horizontalScale(10),
-  },
-  snoozeHeaderTitle: {
-    fontSize: moderateScale(14),
-    fontWeight: '800',
-    color: Colors.textMain,
-  },
-  snoozeTagPenalty: {
-    color: Colors.melon,
-    fontSize: moderateScale(10),
-    fontWeight: '800',
-    marginTop: verticalScale(2),
-  },
-  streakNoticePill: {
-    backgroundColor: Colors.duneSoft,
-    borderWidth: verticalScale(1),
-    borderColor: Colors.dune,
-    padding: verticalScale(10),
-    borderRadius: verticalScale(12),
-    marginTop: verticalScale(12),
-  },
-  streakNoticeText: {
-    fontSize: moderateScale(11),
-    color: Colors.textMuted,
+  settingTitle: {
+    fontSize: moderateScale(15),
     fontWeight: '600',
+    color: Colors.textDark,
   },
-  headerActionsRow: {
+  settingSub: {
+    fontSize: moderateScale(12),
+    color: Colors.textMuted,
+    marginTop: verticalScale(1),
+  },
+  previewSoundBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: horizontalScale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: verticalScale(16),
+    borderWidth: 1,
+    borderColor: Colors.brandOrange,
   },
-  radioCheckmarkText: {
-    color: Colors.white,
-    fontSize: moderateScale(12),
-    fontWeight: '800',
+  previewSoundText: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: Colors.brandOrange,
+    marginRight: horizontalScale(6),
   },
-  snoozeToggleTrack: {
+
+  // Toggle Switch
+  toggleTrack: {
     width: horizontalScale(48),
     height: verticalScale(28),
     borderRadius: verticalScale(14),
-    backgroundColor: Colors.azure,
+    backgroundColor: Colors.brandOrange,
     padding: verticalScale(2),
     justifyContent: 'center',
   },
-  snoozeToggleTrackOff: {
-    backgroundColor: '#CBD5E1',
+  toggleTrackOff: {
+    backgroundColor: Colors.grayLight,
   },
-  snoozeToggleThumb: {
+  toggleThumb: {
     width: verticalScale(24),
     height: verticalScale(24),
     borderRadius: verticalScale(12),
     backgroundColor: Colors.white,
     alignSelf: 'flex-end',
   },
-  snoozeToggleThumbOff: {
+  toggleThumbOff: {
     alignSelf: 'flex-start',
   },
-  saveAlarmBottomBtn: {
-    width: '100%',
-    height: verticalScale(54),
-    borderRadius: verticalScale(27),
-    backgroundColor: Colors.azure,
+
+  // Save Alarm Action Button
+  saveAlarmBtn: {
+    height: verticalScale(52),
+    borderRadius: verticalScale(14),
+    backgroundColor: Colors.brandOrange,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.azure,
-    shadowOffset: { width: 0, height: verticalScale(6) },
-    shadowOpacity: 0.35,
-    shadowRadius: verticalScale(12),
-    elevation: 6,
+    marginTop: verticalScale(8),
+    marginBottom: verticalScale(8),
   },
   saveAlarmBtnText: {
     color: Colors.white,
     fontSize: moderateScale(16),
-    fontWeight: '800',
-    letterSpacing: horizontalScale(0.5),
+    fontWeight: '600',
+  },
+
+  // Delete Action Button
+  deleteAlarmBtn: {
+    flexDirection: 'row',
+    height: verticalScale(48),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteAlarmBtnText: {
+    color: Colors.error,
+    fontSize: moderateScale(15),
+    fontWeight: '600',
+    marginLeft: horizontalScale(6),
+  },
+
+  previewSoundBtnActive: {
+    backgroundColor: Colors.brandOrange,
+  },
+  previewSoundTextActive: {
+    color: Colors.white,
+  },
+  soundInfoTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: horizontalScale(8),
+  },
+  soundTextCol: {
+    flex: 1,
+  },
+
+  // Sound Picker Modal
+  soundModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  soundModalContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: verticalScale(24),
+    borderTopRightRadius: verticalScale(24),
+    paddingHorizontal: horizontalScale(20),
+    paddingTop: verticalScale(20),
+    paddingBottom: verticalScale(34),
+  },
+  soundModalIndicator: {
+    width: horizontalScale(36),
+    height: verticalScale(4),
+    backgroundColor: Colors.grayLight,
+    borderRadius: verticalScale(2),
+    alignSelf: 'center',
+    marginBottom: verticalScale(16),
+  },
+  soundModalHeader: {
+    marginBottom: verticalScale(16),
+  },
+  soundModalTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  soundModalSub: {
+    fontSize: moderateScale(12),
+    color: Colors.onSurfaceVariant,
+    marginTop: verticalScale(2),
+  },
+  soundOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: verticalScale(16),
+    paddingHorizontal: horizontalScale(14),
+    paddingVertical: verticalScale(14),
+    marginBottom: verticalScale(10),
+  },
+  soundOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  soundOptionIconCircle: {
+    width: verticalScale(40),
+    height: verticalScale(40),
+    borderRadius: verticalScale(12),
+    backgroundColor: Colors.brandOrangeLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: horizontalScale(12),
+  },
+  soundOptionIconCirclePurple: {
+    backgroundColor: Colors.brandPurpleLight,
+  },
+  soundOptionTexts: {
+    flex: 1,
+  },
+  soundOptionTitle: {
+    fontSize: moderateScale(15),
+    fontWeight: '600',
+    color: Colors.textDark,
+  },
+  soundOptionDesc: {
+    fontSize: moderateScale(11),
+    color: Colors.onSurfaceVariant,
+    marginTop: verticalScale(2),
+  },
+  soundModalCancelBtn: {
+    marginTop: verticalScale(8),
+    height: verticalScale(48),
+    borderRadius: verticalScale(14),
+    backgroundColor: Colors.graySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soundModalCancelText: {
+    fontSize: moderateScale(15),
+    fontWeight: '600',
+    color: Colors.textDark,
   },
 });

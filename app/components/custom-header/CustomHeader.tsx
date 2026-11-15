@@ -1,6 +1,9 @@
 import React, { FC, ReactNode, memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import AppText from '../app-text/AppText';
+import AppIcon from '../app-icon/AppIcon';
+import { Colors } from '../../theme/Colors';
+import { commonString } from '../../constants';
 import { styles } from './CustomHeaderStyle';
 
 interface CustomHeaderProps {
@@ -12,6 +15,8 @@ interface CustomHeaderProps {
   avatarText?: string;
   isDark?: boolean;
 }
+
+const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 const CustomHeader: FC<CustomHeaderProps> = ({
   title,
@@ -30,15 +35,19 @@ const CustomHeader: FC<CustomHeaderProps> = ({
             onPress={onBackPress}
             style={[styles.backButton, isDark && styles.backButtonDark]}
             accessible={true}
-            accessibilityLabel="Back"
+            hitSlop={HIT_SLOP}
+            accessibilityLabel={commonString.back}
             accessibilityRole="button">
-            <AppText style={[styles.backText, isDark && styles.textDark]}>
-              ‹
-            </AppText>
+            <AppIcon
+              name="chevronLeft"
+              size="xl"
+              strokeWidth={2.25}
+              color={isDark ? Colors.white : Colors.textMain}
+            />
           </TouchableOpacity>
         ) : (
           <View style={styles.logoBadge}>
-            <AppText style={styles.logoIcon}>☀️</AppText>
+            <AppIcon name="sun" size="md" color={Colors.white} />
           </View>
         )}
         <AppText style={[styles.titleText, isDark && styles.textDark]}>

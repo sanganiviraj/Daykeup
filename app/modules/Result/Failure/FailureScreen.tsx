@@ -2,10 +2,11 @@ import React, { FC, memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AppText, SafeAreaContainer } from '../../../components';
+import { AppIcon, AppText, SafeAreaContainer } from '../../../components';
 import { resultScreenString, Routes } from '../../../constants';
 import { RootStackParamList } from '../../../types';
-import { styles } from './FailureScreenStyles';
+import { Colors } from '../../../theme/Colors';
+import { HERO_ICON_SIZE, styles } from './FailureScreenStyles';
 
 type FailureNavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -17,11 +18,18 @@ const FailureScreen: FC = () => {
   };
 
   return (
-    <SafeAreaContainer edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaContainer
+      edges={['top', 'bottom', 'left', 'right']}
+      backgroundColor={Colors.creamBackground}>
       <View style={styles.container}>
         <View style={styles.centerContent}>
-          <View style={styles.bellCircle}>
-            <AppText style={styles.bellEmoji}>⏰</AppText>
+          <View style={styles.iconCircle}>
+            <AppIcon
+              name="alarmClock"
+              size={HERO_ICON_SIZE}
+              strokeWidth={1.75}
+              color={Colors.error}
+            />
           </View>
 
           <AppText style={styles.titleText}>
@@ -40,8 +48,9 @@ const FailureScreen: FC = () => {
           accessible={true}
           accessibilityLabel={resultScreenString.retryChallenge}
           accessibilityRole="button">
+          <AppIcon name="rotateCcw" size="sm" color={Colors.white} />
           <AppText style={styles.retryBtnText}>
-            🔔 {resultScreenString.retryChallenge}
+            {resultScreenString.retryChallenge}
           </AppText>
         </TouchableOpacity>
       </View>
@@ -50,4 +59,3 @@ const FailureScreen: FC = () => {
 };
 
 export default memo(FailureScreen);
-

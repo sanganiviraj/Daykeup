@@ -6,26 +6,8 @@ interface AlarmState {
   activeAlarmId: string | null;
 }
 
-const defaultAlarm: AlarmItem = {
-  id: 'alarm-default-1',
-  hour: '06',
-  minute: '30',
-  period: 'AM',
-  title: 'Morning Wake Up • Tomorrow',
-  enabled: true,
-  repeatDays: [0, 1, 2, 3, 4], // Mon - Fri
-  motivationalImage:
-    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-  motivationalQuote: '“Remember why you started. Your future self is waiting.”',
-  challengeType: 'math',
-  difficulty: 'medium',
-  snoozePenalty: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
-
 const initialState: AlarmState = {
-  alarms: [defaultAlarm],
+  alarms: [],
   activeAlarmId: null,
 };
 
@@ -33,6 +15,9 @@ export const alarmSlice = createSlice({
   name: 'alarm',
   initialState,
   reducers: {
+    setAlarms: (state, action: PayloadAction<AlarmItem[]>) => {
+      state.alarms = action.payload;
+    },
     toggleAlarm: (state, action: PayloadAction<string>) => {
       const alarm = state.alarms.find(a => a.id === action.payload);
       if (alarm) {
@@ -57,6 +42,5 @@ export const alarmSlice = createSlice({
   },
 });
 
-export const { toggleAlarm, saveAlarm, deleteAlarm, setActiveAlarm } = alarmSlice.actions;
+export const { setAlarms, toggleAlarm, saveAlarm, deleteAlarm, setActiveAlarm } = alarmSlice.actions;
 export default alarmSlice.reducer;
-
