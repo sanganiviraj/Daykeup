@@ -9,7 +9,7 @@ const SafeAreaContainer: FC<SafeAreaContainerProps> = ({
   children,
   edges = ['top', 'left', 'right'],
   style,
-  backgroundColor = Colors.dune,
+  backgroundColor = Colors.white,
   isDark = false,
 }) => {
   return (

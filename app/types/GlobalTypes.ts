@@ -1,7 +1,16 @@
 import { ReactNode } from 'react';
 import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
-export type ChallengeType = 'math' | 'memory' | 'pattern' | 'reaction' | 'mystery';
+export type ChallengeType =
+  | 'knife'
+  | 'hockey'
+  | 'stack'
+  | 'pong'
+  | 'math'
+  | 'memory'
+  | 'pattern'
+  | 'reaction'
+  | 'mystery';
 export type ChallengeDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface AlarmItem {
@@ -10,13 +19,17 @@ export interface AlarmItem {
   minute: string;
   period: 'AM' | 'PM';
   title: string;
+  label?: string;
   enabled: boolean;
   repeatDays: number[]; // 0: Mon, 1: Tue, 2: Wed, 3: Thu, 4: Fri, 5: Sat, 6: Sun
-  motivationalImage: string;
+  motivationalImage?: string;
   motivationalQuote: string;
   challengeType: ChallengeType;
   difficulty: ChallengeDifficulty;
-  snoozePenalty: boolean;
+  soundUri?: string;
+  soundTitle?: string;
+  vibrationEnabled?: boolean;
+  snoozePenalty?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +60,23 @@ export interface UserStats {
   wakeUpCompleted: boolean;
   challengeCompleted: boolean;
   morningGoalCompleted: boolean;
+}
+
+export interface AlarmCardProps {
+  alarm: AlarmItem;
+  onPress: () => void;
+  onToggle: () => void;
+}
+
+export type AppIconSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
+
+export interface AppIconProps {
+  name: import('../components/app-icon/AppIcon').AppIconName;
+  size?: AppIconSize;
+  color?: string;
+  strokeWidth?: number;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 export interface AppTextProps {
@@ -93,10 +123,16 @@ export interface CountdownDialProps {
 }
 
 export type RootStackParamList = {
-  HomeScreen: undefined;
+  HomeScreen: { initialTab?: 'main' | 'alarms' } | undefined;
+  AlarmsScreen: undefined;
   CreateAlarmScreen: { alarmId?: string } | undefined;
   AlarmRingingScreen: { alarmId?: string } | undefined;
   ChallengeScreen: { alarmId?: string } | undefined;
+  GamesHubScreen: undefined;
+  KnifeGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
+  HockeyGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
+  StackGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
+  PongGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
   SuccessScreen: { earnedXp?: number; streak?: number } | undefined;
   FailureScreen: { reason?: string } | undefined;
 };

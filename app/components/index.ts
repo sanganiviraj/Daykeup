@@ -1,7 +1,15 @@
 export { default as AppText } from './app-text/AppText';
+export { default as AppIcon } from './app-icon/AppIcon';
+export { default as AlarmCard } from './alarm-card/AlarmCard';
 export { default as CustomButton } from './custom-button/CustomButton';
 export { default as SafeAreaContainer } from './safe-area-container/SafeAreaContainer';
 export { default as CustomHeader } from './custom-header/CustomHeader';
 export { default as SwipeToWake } from './swipe-to-wake/SwipeToWake';
 export { default as CountdownDial } from './countdown-dial/CountdownDial';
-
+export { default as BottomNavigation } from './bottom-navigation/BottomNavigation';
+export { default as TimePickerModal } from './time-picker-modal/TimePickerModal';
+export { default as LockScreenPermissionModal } from './lock-screen-permission-modal/LockScreenPermissionModal';
+export { default as KnifeThrowerGame } from './games/knife-thrower/KnifeThrowerGame';
+export { default as AirHockeyGame } from './games/air-hockey/AirHockeyGame';
+export { default as StackTowerGame } from './games/stack-tower/StackTowerGame';
+export { default as CurvePongGame } from './games/curve-pong/CurvePongGame';

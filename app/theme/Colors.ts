@@ -33,17 +33,45 @@ export type ColorType =
   | 'success'
   | 'white'
   | 'black'
-  | 'transparent';
+  | 'transparent'
+  | 'gradientStart'
+  | 'gradientEnd'
+  | 'gradientDark'
+  // Stitch Design System Tokens
+  | 'brandOrange'
+  | 'brandOrangeLight'
+  | 'brandOrangeContainer'
+  | 'brandPurple'
+  | 'brandPurpleLight'
+  | 'brandCream'
+  | 'brandCreamLight'
+  | 'creamBackground'
+  | 'creamBorder'
+  | 'heroGradientStart'
+  | 'heroGradientMid'
+  | 'heroGradientEnd'
+  | 'heroTextCream'
+  | 'heroSubText'
+  | 'navInactive'
+  | 'navActiveBg'
+  | 'grayLight'
+  | 'graySubtle'
+  | 'grayBorder'
+  | 'surfaceContainer'
+  | 'surfaceContainerHigh'
+  | 'textDark'
+  | 'tagGold'
+  | 'tagGoldText';
 
 export const Colors: Record<ColorType, string> = {
   azure: '#067FF2',
   azureDark: '#0062C4',
   azureLight: '#EBF4FF',
-  primary: '#067FF2',
-  primaryContainer: '#0073DE',
+  primary: '#FF7315', // Dayekup Primary Brand Orange
+  primaryContainer: '#FF9E44',
   onPrimary: '#FFFFFF',
-  dune: '#F0E0E1',
-  duneSoft: '#FBF7F8',
+  dune: '#FAF8F5',
+  duneSoft: '#F8FAFC',
   mint: '#09B583',
   jonquil: '#F6CD1B',
   jonquilLight: '#FEF9E7',
@@ -51,24 +79,53 @@ export const Colors: Record<ColorType, string> = {
   melonLight: '#FFF1EE',
   warmLavender: '#FEBF73',
   lavenderLight: '#FFF7EC',
-  purpleAccent: '#B65FDF',
+  purpleAccent: '#804A8A',
   darkBg: '#0B1118',
   darkSurfaceContainer: '#131C27',
   darkSurfaceContainerHigh: '#1C2736',
   darkSurfaceContainerHighest: '#243245',
   darkSurfaceContainerLowest: '#070C12',
-  onSurfaceVariant: '#94A3B8',
-  textMain: '#0F172A',
+  onSurfaceVariant: '#71717A',
+  textMain: '#141210',
   textSecondary: '#334155',
-  textMuted: '#64748B',
+  textMuted: '#8A7A6E',
   card: '#FFFFFF',
-  cardSubtle: '#F7F9FF',
-  border: '#E2E8F0',
-  borderSubtle: '#E4E9F2',
+  cardSubtle: '#F8FAFC',
+  border: '#F0E6DB',
+  borderSubtle: '#E2E8F0',
   error: '#EF4444',
   errorContainer: '#FFDAD6',
   success: '#09B583',
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
+  gradientStart: '#FF7315',
+  gradientEnd: '#FF9E44',
+  gradientDark: '#120F0D',
+
+  // Stitch Design System Tokens
+  brandOrange: '#FF7315',
+  brandOrangeLight: '#FFF0E5',
+  brandOrangeContainer: '#FF9E44',
+  brandPurple: '#804A8A',
+  brandPurpleLight: '#F3E2F7',
+  brandCream: '#F8D299',
+  brandCreamLight: '#FFF8F0',
+  creamBackground: '#FAF8F5',
+  creamBorder: '#FAE2C8',
+  heroGradientStart: '#3D1B0D',
+  heroGradientMid: '#1A1412',
+  heroGradientEnd: '#120F0D',
+  heroTextCream: '#FFF6E5',
+  heroSubText: '#FFB677',
+  navInactive: '#8E8E93',
+  navActiveBg: '#F4F4F6',
+  grayLight: '#E2D7CD',
+  graySubtle: '#F5EDE4',
+  grayBorder: '#F0E6DB',
+  surfaceContainer: '#F8F9FA',
+  surfaceContainerHigh: '#F5F5F7',
+  textDark: '#221914',
+  tagGold: '#2E1500',
+  tagGoldText: '#8C5208',
 };

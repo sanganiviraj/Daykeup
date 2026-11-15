@@ -6,6 +6,8 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import AppText from '../app-text/AppText';
+import AppIcon from '../app-icon/AppIcon';
+import { Colors } from '../../theme/Colors';
 import { SwipeToWakeProps } from '../../types';
 import { alarmRingingString } from '../../constants';
 import { styles } from './SwipeToWakeStyle';
@@ -23,38 +25,55 @@ const SwipeToWake: FC<SwipeToWakeProps> = ({
 
   const pan = useRef(new Animated.Value(0)).current;
 
+  // The responder is created once, so read live values through refs
+  // instead of the stale closure from the first render.
+  const maxDragRef = useRef<number>(0);
+  maxDragRef.current = maxDrag;
+  const onSwipeCompleteRef = useRef(onSwipeComplete);
+  onSwipeCompleteRef.current = onSwipeComplete;
+  const isCompletedRef = useRef<boolean>(false);
+
   const onLayout = (e: LayoutChangeEvent) => {
     setTrackWidth(e.nativeEvent.layout.width);
   };
 
+  const resetKnob = () => {
+    Animated.spring(pan, {
+      toValue: 0,
+      friction: 5,
+      tension: 40,
+      useNativeDriver: false,
+    }).start();
+  };
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => !isCompletedRef.current,
+      onMoveShouldSetPanResponder: () => !isCompletedRef.current,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx > 0) {
-          const clamped = Math.min(gestureState.dx, maxDrag > 0 ? maxDrag : 250);
-          pan.setValue(clamped);
-        }
+        const clamped = Math.min(
+          Math.max(gestureState.dx, 0),
+          maxDragRef.current,
+        );
+        pan.setValue(clamped);
       },
       onPanResponderRelease: (_, gestureState) => {
-        const threshold = maxDrag > 0 ? maxDrag * 0.85 : 200;
-        if (gestureState.dx >= threshold) {
+        const max = maxDragRef.current;
+        if (max > 0 && gestureState.dx >= max * 0.85) {
+          isCompletedRef.current = true;
           Animated.timing(pan, {
-            toValue: maxDrag > 0 ? maxDrag : 250,
+            toValue: max,
             duration: 150,
             useNativeDriver: false,
           }).start(() => {
-            onSwipeComplete();
+            onSwipeCompleteRef.current();
           });
         } else {
-          Animated.spring(pan, {
-            toValue: 0,
-            friction: 5,
-            tension: 40,
-            useNativeDriver: false,
-          }).start();
+          resetKnob();
         }
       },
+      onPanResponderTerminate: resetKnob,
     }),
   ).current;
 
@@ -88,7 +107,7 @@ const SwipeToWake: FC<SwipeToWakeProps> = ({
               transform: [{ translateX: pan }],
             },
           ]}>
-          <AppText style={styles.knobArrow}>➔</AppText>
+          <AppIcon name="chevronRight" size="xl" strokeWidth={2.5} color={Colors.white} />
         </Animated.View>
       </View>
 

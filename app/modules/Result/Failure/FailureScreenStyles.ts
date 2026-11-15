@@ -2,63 +2,55 @@ import { StyleSheet } from 'react-native';
 import { Colors } from '../../../theme/Colors';
 import { verticalScale, horizontalScale, moderateScale } from '../../../theme/Metrics';
 
+export const HERO_ICON_SIZE = moderateScale(44);
+
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: horizontalScale(20),
+    paddingHorizontal: horizontalScale(24),
+    paddingBottom: verticalScale(16),
     justifyContent: 'space-between',
-    paddingBottom: verticalScale(34),
   },
   centerContent: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: verticalScale(50),
   },
-  bellCircle: {
-    width: verticalScale(100),
-    height: verticalScale(100),
-    borderRadius: verticalScale(50),
-    backgroundColor: Colors.melonLight,
-    borderWidth: verticalScale(2),
-    borderColor: 'rgba(255, 167, 143, 0.4)',
+  iconCircle: {
+    width: verticalScale(96),
+    height: verticalScale(96),
+    borderRadius: verticalScale(48),
+    backgroundColor: Colors.errorContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: verticalScale(20),
-  },
-  bellEmoji: {
-    fontSize: moderateScale(48),
+    marginBottom: verticalScale(24),
   },
   titleText: {
-    fontSize: moderateScale(24),
-    fontWeight: '800',
-    color: Colors.textMain,
+    fontSize: moderateScale(28),
+    fontWeight: '700',
+    color: Colors.textDark,
     textAlign: 'center',
   },
   descText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(15),
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginTop: verticalScale(10),
-    lineHeight: moderateScale(18),
-    paddingHorizontal: horizontalScale(16),
+    lineHeight: moderateScale(22),
+    marginTop: verticalScale(8),
+    paddingHorizontal: horizontalScale(12),
   },
   retryBtn: {
-    width: '100%',
-    height: verticalScale(54),
-    borderRadius: verticalScale(27),
-    backgroundColor: Colors.melon,
+    flexDirection: 'row',
+    height: verticalScale(52),
+    borderRadius: verticalScale(14),
+    backgroundColor: Colors.brandOrange,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.melon,
-    shadowOffset: { width: 0, height: verticalScale(6) },
-    shadowOpacity: 0.35,
-    shadowRadius: verticalScale(12),
-    elevation: 6,
   },
   retryBtnText: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
     color: Colors.white,
-    fontSize: moderateScale(15),
-    fontWeight: '800',
+    marginLeft: horizontalScale(8),
   },
 });
-

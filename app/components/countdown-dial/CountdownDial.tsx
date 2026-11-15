@@ -18,7 +18,7 @@ const CountdownDial: FC<CountdownDialProps> = ({
       <View
         style={[
           styles.dialCircle,
-          { borderColor: isUrgent ? Colors.melon : Colors.azure },
+          { borderColor: isUrgent ? Colors.error : Colors.brandOrange },
         ]}>
         <View style={styles.innerDial}>
           <AppText style={styles.secondsNumber}>{remainingSeconds}</AppText>
@@ -34,7 +34,7 @@ const CountdownDial: FC<CountdownDialProps> = ({
             styles.urgencyBarFill,
             {
               width: `${percentage * 100}%`,
-              backgroundColor: isUrgent ? Colors.melon : Colors.azure,
+              backgroundColor: isUrgent ? Colors.error : Colors.brandOrange,
             },
           ]}
         />

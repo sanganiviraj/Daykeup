@@ -2,11 +2,12 @@ import React, { FC, memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AppText, SafeAreaContainer } from '../../../components';
+import { AppIcon, AppText, SafeAreaContainer } from '../../../components';
 import { resultScreenString, Routes } from '../../../constants';
 import { useAppSelector } from '../../../hooks';
 import { RootStackParamList } from '../../../types';
-import { styles } from './SuccessScreenStyles';
+import { Colors } from '../../../theme/Colors';
+import { HERO_ICON_SIZE, styles } from './SuccessScreenStyles';
 
 type SuccessRouteProp = RouteProp<RootStackParamList, 'SuccessScreen'>;
 type SuccessNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -27,36 +28,49 @@ const SuccessScreen: FC = () => {
   };
 
   return (
-    <SafeAreaContainer edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaContainer
+      edges={['top', 'bottom', 'left', 'right']}
+      backgroundColor={Colors.creamBackground}>
       <View style={styles.container}>
         <View style={styles.centerContent}>
-          <View style={styles.trophyCircle}>
-            <AppText style={styles.trophyEmoji}>🏆</AppText>
+          <View style={styles.iconCircle}>
+            <AppIcon
+              name="sun"
+              size={HERO_ICON_SIZE}
+              strokeWidth={1.75}
+              color={Colors.brandOrange}
+            />
           </View>
 
           <AppText style={styles.titleText}>
             {resultScreenString.congratulations}
           </AppText>
+          <AppText style={styles.subText}>
+            {resultScreenString.successSub}
+          </AppText>
 
-          <View style={styles.xpPillBig}>
-            <AppText style={styles.xpPillBigText}>
-              {`+${earnedXp} Wake Points`}
-            </AppText>
-          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statCol}>
+              <View style={styles.statValueRow}>
+                <AppIcon name="trophy" size="sm" color={Colors.brandOrange} />
+                <AppText style={styles.statValue}>{`+${earnedXp}`}</AppText>
+              </View>
+              <AppText style={styles.statLabel}>
+                {resultScreenString.pointsLabel}
+              </AppText>
+            </View>
 
-          <View style={styles.streakCard}>
-            <AppText style={styles.streakText}>
-              {`🔥 ${currentStreak} Day Streak`}
-            </AppText>
-            <AppText style={styles.levelProgressText}>
-              {`Level ${userStats.level} • Rank: Ascendant`}
-            </AppText>
-          </View>
+            <View style={styles.statDivider} />
 
-          <View style={styles.quoteBox}>
-            <AppText style={styles.quoteText}>
-              {resultScreenString.motivationalPraise}
-            </AppText>
+            <View style={styles.statCol}>
+              <View style={styles.statValueRow}>
+                <AppIcon name="flame" size="sm" color={Colors.brandOrange} />
+                <AppText style={styles.statValue}>{currentStreak}</AppText>
+              </View>
+              <AppText style={styles.statLabel}>
+                {resultScreenString.streakLabel}
+              </AppText>
+            </View>
           </View>
         </View>
 
@@ -77,4 +91,3 @@ const SuccessScreen: FC = () => {
 };
 
 export default memo(SuccessScreen);
-

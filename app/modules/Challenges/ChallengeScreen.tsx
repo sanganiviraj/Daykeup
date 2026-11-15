@@ -5,36 +5,69 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  AppIcon,
   AppText,
   CountdownDial,
   CustomHeader,
   SafeAreaContainer,
 } from '../../components';
-import { challengeScreenString, Routes } from '../../constants';
+import KnifeThrowerGame from '../../components/games/knife-thrower/KnifeThrowerGame';
+import AirHockeyGame from '../../components/games/air-hockey/AirHockeyGame';
+import StackTowerGame from '../../components/games/stack-tower/StackTowerGame';
+import CurvePongGame from '../../components/games/curve-pong/CurvePongGame';
+import {
+  challengeScreenString,
+  commonString,
+  gamesString,
+  Routes,
+} from '../../constants';
 import { useAppDispatch, useAppSelector } from '../../hooks';
+import { AlarmService } from '../../services';
 import {
   awardWakePoints,
   incrementStreak,
   applySnoozePenalty,
   completeProtocolItem,
 } from '../../redux';
-import { MathChallenge, RootStackParamList } from '../../types';
+import { ChallengeType, MathChallenge, RootStackParamList } from '../../types';
 import { generateMathChallenge } from '../../utils';
+import { Colors } from '../../theme/Colors';
 import { styles } from './ChallengeScreenStyles';
 
 type ChallengeNavProp = NativeStackNavigationProp<RootStackParamList>;
+type ChallengeRouteProp = RouteProp<RootStackParamList, 'ChallengeScreen'>;
 
 const TOTAL_SECONDS = 30;
 
 const ChallengeScreen: FC = () => {
   const navigation = useNavigation<ChallengeNavProp>();
+  const route = useRoute<ChallengeRouteProp>();
   const dispatch = useAppDispatch();
   const userStats = useAppSelector(state => state.gamification.userStats);
+  const alarms = useAppSelector(state => state.alarm.alarms);
 
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(21);
+  const currentAlarm =
+    alarms.find(a => a.id === route.params?.alarmId) || alarms[0];
+  const rawChallengeType = currentAlarm?.challengeType || 'knife';
+
+  const [challengeType] = useState<ChallengeType>(() => {
+    if (rawChallengeType === 'mystery') {
+      const candidates: ChallengeType[] = [
+        'knife',
+        'hockey',
+        'stack',
+        'pong',
+        'math',
+      ];
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+    return rawChallengeType;
+  });
+
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
   const [challenge] = useState<MathChallenge>(() =>
     generateMathChallenge(),
   );
@@ -43,46 +76,60 @@ const ChallengeScreen: FC = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setRemainingSeconds(prev => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          navigation.replace(Routes.failure, {
-            reason: challengeScreenString.secondsLabel,
-          });
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (challengeType === 'math') {
+      timerRef.current = setInterval(() => {
+        setRemainingSeconds(prev => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            navigation.replace(Routes.failure, {
+              reason: challengeScreenString.timeUpReason,
+            });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [navigation]);
+  }, [navigation, challengeType]);
+
+  const handleGameSuccess = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    dispatch(awardWakePoints(50));
+    dispatch(incrementStreak());
+    dispatch(completeProtocolItem('wakeUp'));
+    dispatch(completeProtocolItem('challenge'));
+    AlarmService.stopAlarmSound();
+
+    setTimeout(() => {
+      navigation.replace(Routes.success, {
+        earnedXp: 50,
+        streak: userStats.streak + 1,
+      });
+    }, 300);
+  };
+
+  const handleGameFailure = () => {
+    Alert.alert(
+      challengeScreenString.gameMissedTitle,
+      challengeScreenString.gameMissedMsg,
+      [{ text: challengeScreenString.tryAgainBtn }],
+    );
+  };
 
   const handleSelectOption = (optionId: string, val: number) => {
     setSelectedOptionId(optionId);
 
     if (val === challenge.correctAnswer) {
-      if (timerRef.current) clearInterval(timerRef.current);
-
-      dispatch(awardWakePoints(25));
-      dispatch(incrementStreak());
-      dispatch(completeProtocolItem('wakeUp'));
-      dispatch(completeProtocolItem('challenge'));
-
-      setTimeout(() => {
-        navigation.replace(Routes.success, {
-          earnedXp: 25,
-          streak: userStats.streak + 1,
-        });
-      }, 300);
+      handleGameSuccess();
     } else {
       Alert.alert(
-        'Incorrect Answer',
-        'Try again! The clock is ticking.',
-        [{ text: 'Continue' }],
+        challengeScreenString.wrongAnswerTitle,
+        challengeScreenString.wrongAnswerMsg,
+        [{ text: challengeScreenString.tryAgainBtn }],
       );
     }
   };
@@ -92,12 +139,13 @@ const ChallengeScreen: FC = () => {
       challengeScreenString.emergencySnooze,
       challengeScreenString.snoozeConfirm,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: commonString.cancel, style: 'cancel' },
         {
-          text: 'Snooze (-50 XP)',
+          text: challengeScreenString.snoozeConfirmBtn,
           style: 'destructive',
           onPress: () => {
             if (timerRef.current) clearInterval(timerRef.current);
+            AlarmService.stopAlarmSound();
             dispatch(applySnoozePenalty(50));
             navigation.goBack();
           },
@@ -106,68 +154,122 @@ const ChallengeScreen: FC = () => {
     );
   };
 
+  // If Knife Thrower Wake-up Quest
+  if (challengeType === 'knife') {
+    return (
+      <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+        <CustomHeader
+          title={gamesString.knifeCardTitle}
+          showBack={true}
+          onBackPress={handleEmergencySnooze}
+        />
+        <KnifeThrowerGame
+          totalKnives={7}
+          initialKnivesCount={1}
+          isAlarmMode={true}
+          onSuccess={handleGameSuccess}
+          onFailure={handleGameFailure}
+          onExit={handleEmergencySnooze}
+        />
+      </SafeAreaContainer>
+    );
+  }
+
+  // If Air Hockey Wake-up Quest
+  if (challengeType === 'hockey') {
+    return (
+      <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+        <CustomHeader
+          title={gamesString.hockeyCardTitle}
+          showBack={true}
+          onBackPress={handleEmergencySnooze}
+        />
+        <AirHockeyGame
+          targetScore={2}
+          isAlarmMode={true}
+          onSuccess={handleGameSuccess}
+          onFailure={handleGameFailure}
+          onExit={handleEmergencySnooze}
+        />
+      </SafeAreaContainer>
+    );
+  }
+
+  // If Stack Tower Wake-up Quest
+  if (challengeType === 'stack') {
+    return (
+      <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+        <CustomHeader
+          title={gamesString.stackCardTitle}
+          showBack={true}
+          onBackPress={handleEmergencySnooze}
+        />
+        <StackTowerGame
+          targetHeight={10}
+          isAlarmMode={true}
+          onSuccess={handleGameSuccess}
+          onFailure={handleGameFailure}
+          onExit={handleEmergencySnooze}
+        />
+      </SafeAreaContainer>
+    );
+  }
+
+  // If Curve Pong Wake-up Quest
+  if (challengeType === 'pong') {
+    return (
+      <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+        <CustomHeader
+          title={gamesString.pongCardTitle}
+          showBack={true}
+          onBackPress={handleEmergencySnooze}
+        />
+        <CurvePongGame
+          targetScore={2}
+          isAlarmMode={true}
+          onSuccess={handleGameSuccess}
+          onFailure={handleGameFailure}
+          onExit={handleEmergencySnooze}
+        />
+      </SafeAreaContainer>
+    );
+  }
+
+  // Default Math speed challenge
   return (
-    <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaContainer
+      edges={['top', 'left', 'right', 'bottom']}
+      backgroundColor={Colors.creamBackground}>
       <CustomHeader
         title={challengeScreenString.headerTitle}
         showBack={true}
-        onBackPress={() => navigation.goBack()}
+        showAvatar={false}
+        onBackPress={handleEmergencySnooze}
       />
 
       <ScrollView
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}>
-        {/* Countdown Dial */}
         <CountdownDial
           totalSeconds={TOTAL_SECONDS}
           remainingSeconds={remainingSeconds}
         />
 
-        {/* Challenge Heading */}
-        <View style={styles.challengeTitleBlock}>
-          <AppText style={styles.challengeHeading}>
-            {challengeScreenString.challengeHeading}
+        <AppText style={styles.challengeHeading}>
+          {challengeScreenString.challengeHeading}
+        </AppText>
+
+        {/* Equation */}
+        <View style={styles.equationBox}>
+          <AppText style={styles.equationText}>
+            {`${challenge.num1} ${challenge.operator} ${challenge.num2} = ?`}
           </AppText>
-          <AppText style={styles.challengeSubheading}>
-            {challengeScreenString.challengeSubheading}
+          <AppText style={styles.instructionText}>
+            {challengeScreenString.tapCorrectSum}
           </AppText>
         </View>
 
-        {/* Gameplay Card */}
-        <View style={styles.gameplayCard}>
-          <View style={styles.gameplayHeaderRow}>
-            <View style={styles.problemBadge}>
-              <AppText>🧠</AppText>
-              <AppText style={styles.problemBadgeText}>
-                {challengeScreenString.problemBadge}
-              </AppText>
-            </View>
-            <View style={styles.rapidBadge}>
-              <AppText style={styles.rapidBadgeText}>
-                {challengeScreenString.rapidBadge}
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.equationBox}>
-            <View style={styles.equationRow}>
-              <AppText style={styles.equationText}>
-                {`${challenge.num1} ${challenge.operator} ${challenge.num2}`}
-              </AppText>
-              <AppText style={styles.equationOperator}>=</AppText>
-              <AppText style={styles.equationQuestionMark}>?</AppText>
-            </View>
-          </View>
-
-          <View style={styles.instructionRow}>
-            <AppText>👆</AppText>
-            <AppText style={styles.instructionText}>
-              {challengeScreenString.tapCorrectSum}
-            </AppText>
-          </View>
-        </View>
-
-        {/* 2x2 Option Targets */}
+        {/* 2x2 Answer Grid */}
         <View style={styles.optionsGrid}>
           {challenge.options.map(option => {
             const isSelected = selectedOptionId === option.id;
@@ -175,21 +277,14 @@ const ChallengeScreen: FC = () => {
               <TouchableOpacity
                 key={option.id}
                 onPress={() => handleSelectOption(option.id, option.value)}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
                 style={[
                   styles.optionCard,
                   isSelected && styles.optionCardSelected,
                 ]}
                 accessible={true}
-                accessibilityLabel={`Option ${option.letter}: ${option.value}`}
+                accessibilityLabel={`${option.value}`}
                 accessibilityRole="button">
-                <AppText
-                  style={[
-                    styles.optionLetter,
-                    isSelected && styles.optionLetterSelected,
-                  ]}>
-                  {option.letter}
-                </AppText>
                 <AppText
                   style={[
                     styles.optionValue,
@@ -197,62 +292,33 @@ const ChallengeScreen: FC = () => {
                   ]}>
                   {option.value}
                 </AppText>
-                {isSelected ? (
-                  <View style={styles.selectedBadge}>
-                    <AppText style={styles.selectedBadgeText}>
-                      {challengeScreenString.selectedText}
-                    </AppText>
-                  </View>
-                ) : null}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Rewards Ribbon */}
-        <View style={styles.rewardDock}>
-          <View style={styles.rewardLeft}>
-            <AppText>🎖️</AppText>
-            <AppText style={styles.rewardHeader}>
-              {challengeScreenString.rewardHeader}
-            </AppText>
-          </View>
-
-          <View style={styles.rewardBadgesRow}>
-            <View style={styles.wpPill}>
-              <AppText style={styles.wpPillText}>
-                {challengeScreenString.rewardWp}
-              </AppText>
-            </View>
-            <View style={styles.dayLockPill}>
-              <AppText>🔥</AppText>
-              <AppText style={styles.dayLockText}>
-                {challengeScreenString.rewardStreak}
-              </AppText>
-            </View>
-          </View>
+        <View style={styles.rewardRow}>
+          <AppIcon name="flame" size="sm" color={Colors.brandOrange} />
+          <AppText style={styles.rewardText}>
+            {challengeScreenString.rewardNote}
+          </AppText>
         </View>
 
-        {/* Emergency Snooze Button */}
+        {/* Snooze */}
         <TouchableOpacity
           onPress={handleEmergencySnooze}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           style={styles.snoozeBtn}
           accessible={true}
           accessibilityLabel={challengeScreenString.emergencySnooze}
           accessibilityRole="button">
-          <View style={styles.snoozeLeft}>
-            <AppText>🌙</AppText>
-            <AppText style={styles.snoozeText}>
-              {challengeScreenString.emergencySnooze}
-            </AppText>
-          </View>
-
-          <View style={styles.penaltyPill}>
-            <AppText style={styles.penaltyPillText}>
-              {challengeScreenString.snoozePenalty}
-            </AppText>
-          </View>
+          <AppIcon name="moon" size="sm" color={Colors.textSecondary} />
+          <AppText style={styles.snoozeText}>
+            {challengeScreenString.emergencySnooze}
+          </AppText>
+          <AppText style={styles.penaltyText}>
+            {challengeScreenString.snoozePenalty}
+          </AppText>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaContainer>

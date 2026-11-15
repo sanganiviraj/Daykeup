@@ -1,40 +1,131 @@
-import React, { FC, memo } from 'react';
+import React, { FC, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AppState,
   ScrollView,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import LinearGradient from 'react-native-linear-gradient';
 import {
+  AlarmCard,
+  AppIcon,
   AppText,
+  BottomNavigation,
   CustomHeader,
+  LockScreenPermissionModal,
   SafeAreaContainer,
 } from '../../components';
-import { commonString, homeScreenString, Routes } from '../../constants';
-import { useAppDispatch, useAppSelector } from '../../hooks';
 import {
-  toggleAlarm,
-  completeProtocolItem,
-} from '../../redux';
+  alarmListScreenString,
+  challengeIcons,
+  challengeNames,
+  commonString,
+  homeScreenString,
+  Routes,
+} from '../../constants';
+import { useAppDispatch, useAppSelector } from '../../hooks';
+import { toggleAlarm } from '../../redux';
+import { AlarmService } from '../../services';
 import { RootStackParamList } from '../../types';
-import { styles } from './HomeScreenStyles';
+import { Colors } from '../../theme/Colors';
+import { formatRepeatDays, getCurrentWeek } from '../../utils';
+import { BottomTabType } from '../../components/bottom-navigation/BottomNavigation';
+import { EMPTY_ICON_SIZE, styles } from './HomeScreenStyles';
 
 type HomeScreenNavProp = NativeStackNavigationProp<RootStackParamList>;
+type HomeScreenRouteProp = RouteProp<RootStackParamList, 'HomeScreen'>;
 
 const HomeScreen: FC = () => {
   const navigation = useNavigation<HomeScreenNavProp>();
+  const route = useRoute<HomeScreenRouteProp>();
   const dispatch = useAppDispatch();
 
+  const [activeTab, setActiveTab] = useState<BottomTabType>(
+    route.params?.initialTab || 'main',
+  );
+
+  useEffect(() => {
+    if (route.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route.params?.initialTab]);
+
   const alarms = useAppSelector(state => state.alarm.alarms);
-  const userStats = useAppSelector(state => state.gamification.userStats);
+  const streak = useAppSelector(state => state.gamification.userStats.streak);
+  const week = useMemo(() => getCurrentWeek(), []);
+  const todayIndex = week.findIndex(day => day.isToday);
+  const activeCount = alarms.filter(a => a.enabled).length;
 
   const primaryAlarm = alarms[0];
+  const displayTime = primaryAlarm
+    ? `${primaryAlarm.hour}:${primaryAlarm.minute}`
+    : homeScreenString.noAlarmSetTime;
 
-  const handleToggleAlarm = () => {
-    if (primaryAlarm) {
-      dispatch(toggleAlarm(primaryAlarm.id));
+  const displaySubtitle = primaryAlarm
+    ? formatRepeatDays(primaryAlarm.repeatDays)
+    : homeScreenString.noAlarmScheduled;
+
+  const displayMission = primaryAlarm?.challengeType
+    ? challengeNames[primaryAlarm.challengeType]
+    : homeScreenString.noAlarmMission;
+
+  const displaySound = primaryAlarm
+    ? (primaryAlarm.soundTitle || homeScreenString.defaultSound)
+    : homeScreenString.noAlarmSound;
+
+  const [needsOverlayPermission, setNeedsOverlayPermission] = useState<boolean>(false);
+  const [isPermissionModalVisible, setIsPermissionModalVisible] = useState<boolean>(false);
+  const [isXiaomi, setIsXiaomi] = useState<boolean>(false);
+
+  const checkPermissions = useCallback(async (isInitialCheck: boolean = false) => {
+    const [canOverlay, canFullScreen, brandInfo] = await Promise.all([
+      AlarmService.canDrawOverlays(),
+      AlarmService.canUseFullScreenIntent(),
+      AlarmService.getDeviceBrand(),
+    ]);
+    const needsPerm = !canOverlay || !canFullScreen;
+    setNeedsOverlayPermission(needsPerm);
+    setIsXiaomi(Boolean(brandInfo?.isXiaomi));
+
+    if (isInitialCheck && needsPerm) {
+      const alreadyPrompted = await AlarmService.hasPromptedLockScreen();
+      if (!alreadyPrompted) {
+        setIsPermissionModalVisible(true);
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    checkPermissions(true);
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        checkPermissions(false);
+      }
+    });
+    return () => sub.remove();
+  }, [checkPermissions]);
+
+  const handleOpenPermissionSettings = async () => {
+    setIsPermissionModalVisible(false);
+    await AlarmService.markPromptedLockScreen();
+    await AlarmService.openLockScreenPermissionSettings();
+  };
+
+  const handleDismissPermissionModal = async () => {
+    setIsPermissionModalVisible(false);
+    await AlarmService.markPromptedLockScreen();
+  };
+
+  const handleEnablePermissions = () => {
+    setIsPermissionModalVisible(true);
+  };
+
+  const handleEditAlarm = (alarmId?: string) => {
+    navigation.navigate(Routes.createAlarm, {
+      alarmId: alarmId || primaryAlarm?.id,
+    });
   };
 
   const handleCreateAlarm = () => {
@@ -47,409 +138,335 @@ const HomeScreen: FC = () => {
     });
   };
 
-  const handleMarkMorningGoalDone = () => {
-    dispatch(completeProtocolItem('morningGoal'));
+  const handleToggleAlarm = (alarmId: string) => {
+    const target = alarms.find(a => a.id === alarmId);
+    if (target) {
+      if (target.enabled) {
+        AlarmService.cancel(alarmId);
+      } else {
+        AlarmService.schedule({ ...target, enabled: true });
+      }
+    }
+    dispatch(toggleAlarm(alarmId));
+    const updatedAlarms = alarms.map(a =>
+      a.id === alarmId
+        ? { ...a, enabled: !a.enabled, updatedAt: new Date().toISOString() }
+        : a,
+    );
+    AlarmService.saveAllAlarms(updatedAlarms);
   };
 
-  const completedProtocolsCount =
-    (userStats.wakeUpCompleted ? 1 : 0) +
-    (userStats.challengeCompleted ? 1 : 0) +
-    (userStats.morningGoalCompleted ? 1 : 0);
-
   return (
-    <SafeAreaContainer edges={['top', 'left', 'right']}>
-      <CustomHeader
-        title={commonString.appName}
-        rightComponent={
-          <AppText style={styles.homeTagText}>
-            {homeScreenString.homeTab}
-          </AppText>
-        }
-      />
+    <SafeAreaContainer
+      edges={['top', 'left', 'right']}
+      backgroundColor={Colors.creamBackground}>
+      {/* Alarms Header (Shown when on Alarms tab) */}
+      {activeTab === 'alarms' && (
+        <CustomHeader
+          title={commonString.appName}
+          showBack={true}
+          showAvatar={false}
+          onBackPress={() => setActiveTab('main')}
+        />
+      )}
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}>
-        {/* Greeting Header */}
-        <View style={styles.greetingSection}>
-          <View>
-            <AppText style={styles.greetingTitle}>
-              {homeScreenString.greetingTitle}
-            </AppText>
-            <AppText style={styles.greetingSubtitle}>
-              {homeScreenString.greetingSubtitle}
-            </AppText>
-          </View>
-          <View style={styles.levelBadge}>
-            <AppText style={styles.levelIcon}>⚡</AppText>
-            <AppText style={styles.levelText}>
-              {`Lvl ${userStats.level}`}
-            </AppText>
-          </View>
-        </View>
-
-        {/* 1. Today's Goal Card */}
-        <View style={styles.goalCard}>
-          <View style={styles.goalImageBackground} />
-          <View style={styles.goalGradientOverlay} />
-          <View style={styles.goalCardContent}>
-            <View style={styles.goalBadgesRow}>
-              <View style={styles.todayGoalPill}>
-                <AppText style={styles.todayGoalPillText}>
-                  {homeScreenString.todaysGoalBadge}
+        {activeTab === 'main' ? (
+          // ================= MAIN / HOME TAB =================
+          <>
+            {/* Permission banner for full-screen alarm overlay */}
+            {needsOverlayPermission && (
+              <View style={styles.permissionBannerCard}>
+                <View style={styles.permissionBannerTopRow}>
+                  <AppIcon
+                    name="bell"
+                    size="sm"
+                    color={Colors.brandOrange}
+                    style={styles.permissionBannerIcon}
+                  />
+                  <AppText style={styles.permissionBannerTitle}>
+                    {homeScreenString.overlayBannerTitle}
+                  </AppText>
+                </View>
+                <AppText style={styles.permissionBannerDesc}>
+                  {homeScreenString.overlayBannerDesc}
                 </AppText>
+                <TouchableOpacity
+                  style={styles.permissionBannerActionBtn}
+                  onPress={handleEnablePermissions}
+                  activeOpacity={0.8}
+                  accessible={true}
+                  accessibilityLabel={homeScreenString.overlayBannerAction}
+                  accessibilityRole="button">
+                  <AppText style={styles.permissionBannerActionText}>
+                    {homeScreenString.overlayBannerAction}
+                  </AppText>
+                </TouchableOpacity>
               </View>
-              <View style={styles.streakGoalPill}>
-                <AppText style={styles.streakGoalPillText}>
-                  {`🔥 ${userStats.streak} day streak`}
-                </AppText>
-              </View>
-            </View>
+            )}
 
-            <AppText style={styles.goalQuoteText}>
-              {primaryAlarm?.motivationalQuote || homeScreenString.quote}
-            </AppText>
-
-            <View style={styles.visionRoutinePill}>
-              <AppText style={styles.visionRoutinePillText}>
-                {homeScreenString.visionRoutine}
+            {/* Streak Header */}
+            <View style={styles.streakHeaderRow}>
+              <AppText style={styles.streakLabelText}>
+                {homeScreenString.streakLabel}
               </AppText>
-            </View>
-          </View>
-        </View>
-
-        {/* 2. Upcoming Alarm Card */}
-        <View style={styles.sectionHeaderRow}>
-          <AppText style={styles.sectionHeaderText}>
-            {homeScreenString.upcomingAlarmHeader}
-          </AppText>
-          <AppText style={styles.inTimeBadge}>
-            {homeScreenString.inHours}
-          </AppText>
-        </View>
-
-        <View style={styles.alarmCard}>
-          <View style={styles.alarmTopRow}>
-            <View>
-              <AppText style={styles.alarmSubTitle}>
-                {primaryAlarm?.title || homeScreenString.alarmTitle}
-              </AppText>
-              <View style={styles.alarmTimeRow}>
-                <AppText style={styles.alarmBigTime}>
-                  {primaryAlarm ? `${primaryAlarm.hour}:${primaryAlarm.minute}` : homeScreenString.time}
-                </AppText>
-                <AppText style={styles.alarmPeriod}>
-                  {primaryAlarm?.period || homeScreenString.am}
+              <View style={styles.streakValueRow}>
+                <AppText style={styles.streakDaysTitle}>{streak}</AppText>
+                <AppText style={styles.streakDaysUnit}>
+                  {streak === 1
+                    ? homeScreenString.dayUnit
+                    : homeScreenString.daysUnit}
                 </AppText>
               </View>
             </View>
 
+            {/* Weekly Calendar Strip (current week; past days inside the streak get a flame) */}
+            <View style={styles.weeklyCalendarStrip}>
+              {week.map((day, index) => {
+                const isStreakDay =
+                  day.isPast && todayIndex - index <= streak;
+                return (
+                  <View key={day.key} style={styles.calendarDayCol}>
+                    <AppText
+                      style={[
+                        styles.calendarDayLabel,
+                        day.isToday && styles.calendarDayLabelActive,
+                      ]}>
+                      {day.label}
+                    </AppText>
+                    <View
+                      style={[
+                        styles.calendarNode,
+                        isStreakDay && styles.calendarNodeStreak,
+                        day.isToday && styles.calendarNodeToday,
+                      ]}>
+                      {isStreakDay ? (
+                        <AppIcon
+                          name="flame"
+                          size="sm"
+                          color={Colors.brandOrange}
+                        />
+                      ) : (
+                        <AppText
+                          style={[
+                            styles.calendarNodeText,
+                            day.isToday && styles.calendarNodeTextToday,
+                            !day.isPast &&
+                              !day.isToday &&
+                              styles.calendarNodeTextMuted,
+                          ]}>
+                          {day.date}
+                        </AppText>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Hero Next Alarm Card */}
             <TouchableOpacity
-              onPress={handleToggleAlarm}
-              activeOpacity={0.8}
-              style={[
-                styles.toggleTrack,
-                !primaryAlarm?.enabled && styles.toggleTrackOff,
-              ]}
+              style={styles.heroCardWrapper}
+              activeOpacity={0.94}
+              onPress={primaryAlarm ? () => handleEditAlarm() : handleCreateAlarm}
               accessible={true}
-              accessibilityLabel="Toggle Alarm"
+              accessibilityLabel={homeScreenString.nextAlarmLabel}
               accessibilityRole="button">
-              <View
-                style={[
-                  styles.toggleThumb,
-                  !primaryAlarm?.enabled && styles.toggleThumbOff,
-                ]}>
-                {primaryAlarm?.enabled ? (
-                  <AppText style={styles.toggleCheckIcon}>✓</AppText>
+              <LinearGradient
+                colors={[
+                  Colors.heroGradientStart,
+                  Colors.heroGradientMid,
+                  Colors.heroGradientEnd,
+                ]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.heroGradientContainer}>
+                <View style={styles.heroTopRow}>
+                  <AppText style={styles.heroTrackingLabel}>
+                    {primaryAlarm
+                      ? primaryAlarm.label ||
+                        primaryAlarm.title ||
+                        homeScreenString.nextAlarmLabel
+                      : homeScreenString.noUpcomingAlarmTitle}
+                  </AppText>
+
+                  {primaryAlarm ? (
+                    <TouchableOpacity
+                      style={styles.heroEditButton}
+                      onPress={() => handleEditAlarm()}
+                      activeOpacity={0.7}
+                      accessible={true}
+                      accessibilityLabel={homeScreenString.editAlarmAria}
+                      accessibilityRole="button">
+                      <AppIcon
+                        name="pencil"
+                        size="sm"
+                        color={Colors.heroTextCream}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+
+                <View style={styles.heroCenterBlock}>
+                  <View style={styles.heroTimeRow}>
+                    <AppText style={styles.heroBigTime}>{displayTime}</AppText>
+                    {primaryAlarm?.period ? (
+                      <AppText style={styles.heroPeriod}>
+                        {primaryAlarm.period}
+                      </AppText>
+                    ) : null}
+                  </View>
+                  <AppText style={styles.heroDateSubtitle}>
+                    {displaySubtitle}
+                  </AppText>
+                </View>
+
+                {primaryAlarm ? (
+                  <View style={styles.heroBottomColumns}>
+                    <View style={styles.heroColumn}>
+                      <AppText style={styles.heroColLabel}>
+                        {homeScreenString.missionLabel}
+                      </AppText>
+                      <View style={styles.heroColValueRow}>
+                        <AppIcon
+                          name={challengeIcons[primaryAlarm.challengeType]}
+                          size="sm"
+                          color={Colors.heroSubText}
+                          style={styles.heroColIcon}
+                        />
+                        <AppText style={styles.heroColValue} numberOfLines={1}>
+                          {displayMission}
+                        </AppText>
+                      </View>
+                    </View>
+
+                    <View style={styles.heroColumnDivider} />
+
+                    <View style={styles.heroColumn}>
+                      <AppText style={styles.heroColLabel}>
+                        {homeScreenString.soundLabel}
+                      </AppText>
+                      <View style={styles.heroColValueRow}>
+                        <AppIcon
+                          name="volume"
+                          size="sm"
+                          color={Colors.heroSubText}
+                          style={styles.heroColIcon}
+                        />
+                        <AppText style={styles.heroColValue} numberOfLines={1}>
+                          {displaySound}
+                        </AppText>
+                      </View>
+                    </View>
+                  </View>
                 ) : null}
-              </View>
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
 
-          <View style={styles.alarmFooterRow}>
-            <View style={styles.alarmTagsContainer}>
-              <View style={styles.repeatPill}>
-                <AppText style={styles.repeatPillText}>
-                  {homeScreenString.repeatWeekdays}
-                </AppText>
-              </View>
-              <View style={styles.challengePill}>
-                <AppText style={styles.challengePillText}>
-                  {homeScreenString.challengeTag}
-                </AppText>
-              </View>
-            </View>
-
+            {/* Practice Games Row */}
             <TouchableOpacity
-              onPress={handleCreateAlarm}
-              style={styles.editButton}
+              style={styles.gamesRow}
+              onPress={() => navigation.navigate(Routes.gamesHub)}
+              activeOpacity={0.7}
               accessible={true}
-              accessibilityLabel="Edit Alarm"
+              accessibilityLabel={homeScreenString.gamesBannerTitle}
               accessibilityRole="button">
-              <AppText style={styles.editButtonText}>
-                {`${homeScreenString.tabAlarms} ›`}
-              </AppText>
+              <View style={styles.gamesIconBox}>
+                <AppIcon name="gamepad" size="md" color={Colors.brandOrange} />
+              </View>
+              <View style={styles.gamesTextCol}>
+                <AppText style={styles.gamesTitleText}>
+                  {homeScreenString.gamesBannerTitle}
+                </AppText>
+                <AppText style={styles.gamesSubText}>
+                  {homeScreenString.gamesBannerSub}
+                </AppText>
+              </View>
+              <AppIcon name="chevronRight" size="md" color={Colors.textMuted} />
             </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* 3. Gamification Metrics Row */}
-        <View style={styles.metricsGrid}>
-          <View style={styles.metricCard}>
-            <View>
-              <View style={styles.metricHeader}>
-                <AppText style={styles.metricLabel}>
-                  {homeScreenString.dayStreakLabel}
-                </AppText>
-                <AppText>🔥</AppText>
-              </View>
-              <AppText style={styles.metricBigValue}>
-                {`🔥 ${userStats.streak}`}
-              </AppText>
-              <AppText style={styles.metricSub}>
-                {homeScreenString.dayStreakSub}
-              </AppText>
-            </View>
-            <View style={styles.pillsRow}>
-              {Array.from({ length: 7 }).map((_, idx) => (
-                <View key={`streak-${idx}`} style={styles.streakDot} />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.metricCard}>
-            <View>
-              <View style={styles.metricHeader}>
-                <AppText style={styles.metricLabel}>
-                  {homeScreenString.wakePointsLabel}
-                </AppText>
-                <AppText>🏆</AppText>
-              </View>
-              <AppText style={styles.metricBigValue}>
-                {`🏆 ${userStats.wakePoints.toLocaleString()}`}
-              </AppText>
-              <AppText style={styles.metricSub}>
-                {homeScreenString.wakePointsSub}
-              </AppText>
-            </View>
-            <View style={styles.gainPill}>
-              <AppText style={styles.gainPillText}>
-                {homeScreenString.gainToday}
-              </AppText>
-            </View>
-          </View>
-        </View>
-
-        {/* 4. Today's Protocol Checklist */}
-        <View style={styles.sectionHeaderRow}>
-          <AppText style={styles.sectionHeaderText}>
-            {homeScreenString.protocolHeader}
-          </AppText>
-          <AppText style={styles.inTimeBadge}>
-            {`${completedProtocolsCount} / 3 Done`}
-          </AppText>
-        </View>
-
-        <View style={styles.protocolContainer}>
-          {/* Item 1: Wake Up */}
-          <View style={styles.protocolItemRow}>
-            <View style={styles.protocolLeft}>
-              <View style={styles.checkCircleCompleted}>
-                <AppText style={styles.checkIcon}>✓</AppText>
-              </View>
-              <View style={styles.protocolTextCol}>
-                <AppText style={styles.protocolTitle}>
-                  {homeScreenString.protocolWakeTitle}
-                </AppText>
-                <AppText style={styles.protocolSub}>
-                  {homeScreenString.protocolWakeSub}
-                </AppText>
-              </View>
-            </View>
-            <View style={styles.xpPill}>
-              <AppText style={styles.xpPillText}>
-                {homeScreenString.protocolWakeXp}
-              </AppText>
-            </View>
-          </View>
-
-          {/* Item 2: Challenge */}
-          <View style={styles.protocolItemRow}>
-            <View style={styles.protocolLeft}>
-              <View style={styles.checkCircleCompleted}>
-                <AppText style={styles.checkIcon}>✓</AppText>
-              </View>
-              <View style={styles.protocolTextCol}>
-                <AppText style={styles.protocolTitle}>
-                  {homeScreenString.protocolChallengeTitle}
-                </AppText>
-                <AppText style={styles.protocolSub}>
-                  {homeScreenString.protocolChallengeSub}
-                </AppText>
-              </View>
-            </View>
-            <View style={styles.xpPill}>
-              <AppText style={styles.xpPillText}>
-                {homeScreenString.protocolChallengeXp}
-              </AppText>
-            </View>
-          </View>
-
-          {/* Item 3: Morning Goal */}
-          <View
-            style={[
-              styles.protocolItemRow,
-              !userStats.morningGoalCompleted && styles.protocolItemRowPending,
-            ]}>
-            <View style={styles.protocolLeft}>
-              <View
-                style={
-                  userStats.morningGoalCompleted
-                    ? styles.checkCircleCompleted
-                    : styles.checkCirclePending
-                }>
-                {userStats.morningGoalCompleted ? (
-                  <AppText style={styles.checkIcon}>✓</AppText>
-                ) : (
-                  <View style={styles.pendingDot} />
-                )}
-              </View>
-              <View style={styles.protocolTextCol}>
-                <AppText style={styles.protocolTitle}>
-                  {homeScreenString.protocolGoalTitle}
-                </AppText>
-                <AppText style={styles.protocolSub}>
-                  {homeScreenString.protocolGoalSub}
-                </AppText>
-              </View>
-            </View>
-            {userStats.morningGoalCompleted ? (
-              <View style={styles.xpPill}>
-                <AppText style={styles.xpPillText}>+20 XP</AppText>
-              </View>
-            ) : (
+            {/* Dev-only shortcut for testing the ringing flow */}
+            {__DEV__ ? (
               <TouchableOpacity
-                onPress={handleMarkMorningGoalDone}
-                style={styles.markDoneBtn}
+                style={styles.testRingBtn}
+                onPress={handleTriggerAlarm}
+                activeOpacity={0.7}
                 accessible={true}
-                accessibilityLabel="Mark Goal Done"
+                accessibilityLabel={homeScreenString.testAlarmBtn}
                 accessibilityRole="button">
-                <AppText style={styles.markDoneBtnText}>
-                  {homeScreenString.protocolHeader}
+                <AppIcon name="play" size="xs" color={Colors.textMuted} />
+                <AppText style={styles.testRingBtnText}>
+                  {homeScreenString.testAlarmBtn}
                 </AppText>
               </TouchableOpacity>
+            ) : null}
+          </>
+        ) : (
+          // ================= ALARMS TAB =================
+          <>
+            <View style={styles.alarmsTitleHeaderRow}>
+              <AppText style={styles.alarmsScreenTitle}>
+                {alarmListScreenString.headerTitle}
+              </AppText>
+              {alarms.length > 0 ? (
+                <AppText style={styles.activeAlarmsText}>
+                  {activeCount > 0
+                    ? `${activeCount} ${alarmListScreenString.activeAlarmsCount}`
+                    : alarmListScreenString.noActiveAlarms}
+                </AppText>
+              ) : null}
+            </View>
+
+            {alarms.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconContainer}>
+                  <AppIcon
+                    name="alarmClock"
+                    size={EMPTY_ICON_SIZE}
+                    strokeWidth={1.75}
+                    color={Colors.brandOrange}
+                  />
+                </View>
+
+                <AppText style={styles.emptyTitle}>
+                  {alarmListScreenString.emptyAlarmsTitle}
+                </AppText>
+
+                <AppText style={styles.emptySub}>
+                  {alarmListScreenString.emptyAlarmsSub}
+                </AppText>
+              </View>
+            ) : (
+              alarms.map(alarm => (
+                <AlarmCard
+                  key={alarm.id}
+                  alarm={alarm}
+                  onPress={() => handleEditAlarm(alarm.id)}
+                  onToggle={() => handleToggleAlarm(alarm.id)}
+                />
+              ))
             )}
-          </View>
-        </View>
-
-        {/* 5. Quick Actions */}
-        <View style={styles.sectionHeaderRow}>
-          <AppText style={styles.sectionHeaderText}>
-            {homeScreenString.quickActionsHeader}
-          </AppText>
-        </View>
-
-        <View style={styles.quickActionsGrid}>
-          <TouchableOpacity
-            onPress={handleCreateAlarm}
-            style={[styles.quickActionBtn, styles.quickActionPrimary]}
-            accessible={true}
-            accessibilityLabel="Create Alarm"
-            accessibilityRole="button">
-            <AppText style={styles.quickActionTextPrimary}>
-              {homeScreenString.createAlarmBtn}
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleCreateAlarm}
-            style={styles.quickActionBtn}
-            accessible={true}
-            accessibilityLabel="Set Goal"
-            accessibilityRole="button">
-            <AppText style={styles.quickActionText}>
-              {homeScreenString.setGoalBtn}
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate(Routes.challenge)}
-            style={styles.quickActionBtn}
-            accessible={true}
-            accessibilityLabel="Challenges"
-            accessibilityRole="button">
-            <AppText style={styles.quickActionTextMelon}>
-              {homeScreenString.challengesBtn}
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {}}
-            style={styles.quickActionBtn}
-            accessible={true}
-            accessibilityLabel="Statistics"
-            accessibilityRole="button">
-            <AppText style={styles.quickActionText}>
-              {homeScreenString.statisticsBtn}
-            </AppText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Live Alarm Test Trigger */}
-        <TouchableOpacity
-          onPress={handleTriggerAlarm}
-          style={styles.testRingBtn}
-          accessible={true}
-          accessibilityLabel="Test Alarm Ringing"
-          accessibilityRole="button">
-          <AppText style={styles.testRingBtnText}>
-            🔔 Test Live Alarm Ringing & Swipe
-          </AppText>
-        </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
 
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={[styles.navTabItem, styles.navTabActive]}>
-          <AppText style={styles.navTabIcon}>🏠</AppText>
-          <AppText style={[styles.navTabLabel, styles.navTabLabelActive]}>
-            {homeScreenString.tabHome}
-          </AppText>
-        </TouchableOpacity>
+      {/* Persistent Bottom Navigation Dock (Switches tab in-place with zero screen stack pushing) */}
+      <BottomNavigation
+        currentTab={activeTab}
+        onTabPress={tab => setActiveTab(tab)}
+        onAddPress={handleCreateAlarm}
+      />
 
-        <TouchableOpacity
-          onPress={handleCreateAlarm}
-          style={styles.navTabItem}>
-          <AppText style={styles.navTabIcon}>⏰</AppText>
-          <AppText style={styles.navTabLabel}>
-            {homeScreenString.tabAlarms}
-          </AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate(Routes.challenge)}
-          style={styles.navTabItem}>
-          <AppText style={styles.navTabIcon}>🎮</AppText>
-          <AppText style={styles.navTabLabel}>
-            {homeScreenString.tabChallenges}
-          </AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem}>
-          <AppText style={styles.navTabIcon}>📊</AppText>
-          <AppText style={styles.navTabLabel}>
-            {homeScreenString.tabStats}
-          </AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem}>
-          <AppText style={styles.navTabIcon}>👤</AppText>
-          <AppText style={styles.navTabLabel}>
-            {homeScreenString.tabProfile}
-          </AppText>
-        </TouchableOpacity>
-      </View>
+      {/* Lock Screen & Background Overlay Permission Prompt Modal */}
+      <LockScreenPermissionModal
+        visible={isPermissionModalVisible}
+        isXiaomi={isXiaomi}
+        onOpenSettings={handleOpenPermissionSettings}
+        onDismiss={handleDismissPermissionModal}
+      />
     </SafeAreaContainer>
   );
 };

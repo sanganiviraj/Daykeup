@@ -1,19 +1,30 @@
-import React, { FC, memo, useState } from 'react';
+import React, { FC, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
+  Modal,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  AppIcon,
   AppText,
   CustomHeader,
+  LockScreenPermissionModal,
   SafeAreaContainer,
+  TimePickerModal,
 } from '../../../components';
-import { createAlarmString } from '../../../constants';
+import {
+  challengeIcons,
+  commonString,
+  createAlarmString,
+  lockScreenPermissionString,
+} from '../../../constants';
 import { useAppDispatch, useAppSelector } from '../../../hooks';
-import { saveAlarm } from '../../../redux';
+import { saveAlarm, deleteAlarm } from '../../../redux';
 import {
   AlarmItem,
   ChallengeDifficulty,
@@ -21,8 +32,13 @@ import {
   RootStackParamList,
 } from '../../../types';
 import { AlarmService } from '../../../services';
+import {
+  calculateRestDuration,
+  formatTwoDigits,
+  getCurrentTime12,
+} from '../../../utils';
+import { Colors } from '../../../theme/Colors';
 import { styles } from './CreateAlarmScreenStyles';
-import { formatTwoDigits } from '../../../utils';
 
 type CreateAlarmRouteProp = RouteProp<
   RootStackParamList,
@@ -30,7 +46,29 @@ type CreateAlarmRouteProp = RouteProp<
 >;
 type CreateAlarmNavProp = NativeStackNavigationProp<RootStackParamList>;
 
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const DAYS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+const CHALLENGES: {
+  type: ChallengeType;
+  label: string;
+  subtitle: string;
+}[] = [
+  { type: 'knife', label: createAlarmString.challengeKnife, subtitle: createAlarmString.subKnife },
+  { type: 'hockey', label: createAlarmString.challengeHockey, subtitle: createAlarmString.subHockey },
+  { type: 'stack', label: createAlarmString.challengeStack, subtitle: createAlarmString.subStack },
+  { type: 'pong', label: createAlarmString.challengePong, subtitle: createAlarmString.subPong },
+  { type: 'math', label: createAlarmString.challengeMath, subtitle: createAlarmString.subMath },
+  { type: 'mystery', label: createAlarmString.challengeMystery, subtitle: createAlarmString.subMystery },
+];
+
+const DIFFICULTIES: {
+  level: ChallengeDifficulty;
+  label: string;
+}[] = [
+  { level: 'easy', label: createAlarmString.easy },
+  { level: 'medium', label: createAlarmString.medium },
+  { level: 'hard', label: createAlarmString.hard },
+];
 
 const CreateAlarmScreen: FC = () => {
   const navigation = useNavigation<CreateAlarmNavProp>();
@@ -40,9 +78,31 @@ const CreateAlarmScreen: FC = () => {
   const alarms = useAppSelector(state => state.alarm.alarms);
   const editingAlarm = alarms.find(a => a.id === route.params?.alarmId);
 
-  const [hour, setHour] = useState<string>(editingAlarm?.hour || '06');
-  const [minute, setMinute] = useState<string>(editingAlarm?.minute || '30');
-  const [period, setPeriod] = useState<'AM' | 'PM'>(editingAlarm?.period || 'AM');
+  const [alarmName, setAlarmName] = useState<string>(
+    editingAlarm?.label || editingAlarm?.title || createAlarmString.defaultAlarmName,
+  );
+
+  const [initialTime] = useState(() => {
+    if (editingAlarm) {
+      return {
+        hour: editingAlarm.hour,
+        minute: editingAlarm.minute,
+        period: editingAlarm.period,
+      };
+    }
+    return getCurrentTime12();
+  });
+
+  const [hour, setHour] = useState<string>(initialTime.hour);
+  const [minute, setMinute] = useState<string>(initialTime.minute);
+  const [period, setPeriod] = useState<'AM' | 'PM'>(initialTime.period);
+
+  const restCalculatedText = useMemo(() => {
+    return (
+      calculateRestDuration(hour, minute, period) ||
+      createAlarmString.restCalculated
+    );
+  }, [hour, minute, period]);
   const [repeatDays, setRepeatDays] = useState<number[]>(
     editingAlarm?.repeatDays || [0, 1, 2, 3, 4],
   );
@@ -52,196 +112,419 @@ const CreateAlarmScreen: FC = () => {
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>(
     editingAlarm?.difficulty || 'medium',
   );
-  const [snoozePenalty, setSnoozePenalty] = useState<boolean>(
-    editingAlarm?.snoozePenalty ?? true,
+  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(
+    editingAlarm?.vibrationEnabled !== false,
+  );
+  const [soundUri, setSoundUri] = useState<string | undefined>(
+    editingAlarm?.soundUri,
+  );
+  const [soundTitle, setSoundTitle] = useState<string>(
+    editingAlarm?.soundTitle || createAlarmString.soundDefault,
+  );
+  const [isPlayingPreview, setIsPlayingPreview] = useState<boolean>(false);
+  const [isSoundModalVisible, setIsSoundModalVisible] = useState<boolean>(false);
+  const [isTimeModalVisible, setIsTimeModalVisible] = useState<boolean>(false);
+  const [isPermissionModalVisible, setIsPermissionModalVisible] = useState<boolean>(false);
+  const [isXiaomi, setIsXiaomi] = useState<boolean>(false);
+
+  // Fetch device brand information on mount
+  useEffect(() => {
+    AlarmService.getDeviceBrand().then(brandInfo => {
+      setIsXiaomi(Boolean(brandInfo?.isXiaomi));
+    });
+  }, []);
+
+  // Stop sound preview on component unmount
+  useEffect(() => {
+    return () => {
+      AlarmService.stopPreview();
+    };
+  }, []);
+
+  const handleConfirmTime = useCallback(
+    (newHour: string, newMinute: string, newPeriod: 'AM' | 'PM') => {
+      setHour(newHour);
+      setMinute(newMinute);
+      setPeriod(newPeriod);
+      setIsTimeModalVisible(false);
+    },
+    [],
   );
 
-  const handleAdjustTime = (deltaMinutes: number) => {
-    let totalMins = parseInt(hour, 10) * 60 + parseInt(minute, 10) + deltaMinutes;
-    if (totalMins < 0) totalMins += 24 * 60;
-    totalMins = totalMins % (24 * 60);
+  // Time increment / decrement helper (5m, 15m)
+  const adjustMinutes = (delta: number) => {
+    let currentHour24 = parseInt(hour, 10);
+    if (period === 'PM' && currentHour24 < 12) {
+      currentHour24 += 12;
+    } else if (period === 'AM' && currentHour24 === 12) {
+      currentHour24 = 0;
+    }
 
-    const newH = Math.floor(totalMins / 60);
-    const newM = totalMins % 60;
+    let totalMinutes = currentHour24 * 60 + parseInt(minute, 10) + delta;
+    if (totalMinutes < 0) {
+      totalMinutes += 24 * 60;
+    }
+    totalMinutes = totalMinutes % (24 * 60);
 
-    setHour(formatTwoDigits(newH === 0 ? 12 : newH > 12 ? newH - 12 : newH));
+    const newH24 = Math.floor(totalMinutes / 60);
+    const newM = totalMinutes % 60;
+
+    let newPeriod: 'AM' | 'PM' = 'AM';
+    let newH12 = newH24;
+
+    if (newH24 === 0) {
+      newH12 = 12;
+      newPeriod = 'AM';
+    } else if (newH24 === 12) {
+      newH12 = 12;
+      newPeriod = 'PM';
+    } else if (newH24 > 12) {
+      newH12 = newH24 - 12;
+      newPeriod = 'PM';
+    } else {
+      newPeriod = 'AM';
+    }
+
+    setHour(formatTwoDigits(newH12));
     setMinute(formatTwoDigits(newM));
+    setPeriod(newPeriod);
   };
 
-  const handleToggleDay = (dayIdx: number) => {
-    if (repeatDays.includes(dayIdx)) {
-      setRepeatDays(repeatDays.filter(d => d !== dayIdx));
+  const toggleDay = (dayIndex: number) => {
+    if (repeatDays.includes(dayIndex)) {
+      setRepeatDays(repeatDays.filter(d => d !== dayIndex));
     } else {
-      setRepeatDays([...repeatDays, dayIdx].sort());
+      setRepeatDays([...repeatDays, dayIndex].sort());
     }
   };
 
-  const handleSave = async () => {
+  const getRepeatSubtitle = () => {
+    if (repeatDays.length === 7) return createAlarmString.everydayLabel;
+    if (
+      repeatDays.length === 5 &&
+      [0, 1, 2, 3, 4].every(d => repeatDays.includes(d))
+    ) {
+      return createAlarmString.weekdaysLabel;
+    }
+    return `${repeatDays.length} days`;
+  };
+
+  const handleTogglePreview = async () => {
+    if (isPlayingPreview) {
+      await AlarmService.stopPreview();
+      setIsPlayingPreview(false);
+    } else {
+      setIsPlayingPreview(true);
+      await AlarmService.playPreview(soundUri);
+    }
+  };
+
+  const handlePickRingtone = async () => {
+    setIsSoundModalVisible(false);
+    const result = await AlarmService.pickRingtone(soundUri);
+    if (result) {
+      setSoundUri(result.uri);
+      setSoundTitle(result.title);
+      if (isPlayingPreview) {
+        await AlarmService.playPreview(result.uri);
+      }
+    }
+  };
+
+  const handlePickAudioFile = async () => {
+    setIsSoundModalVisible(false);
+    const result = await AlarmService.pickAudioFile();
+    if (result) {
+      setSoundUri(result.uri);
+      setSoundTitle(result.title);
+      if (isPlayingPreview) {
+        await AlarmService.playPreview(result.uri);
+      }
+    }
+  };
+
+  const executeSave = () => {
+    AlarmService.stopPreview();
+    const finalName = alarmName.trim() || createAlarmString.defaultAlarmName;
     const alarmToSave: AlarmItem = {
       id: editingAlarm?.id || `alarm-${Date.now()}`,
+      title: finalName,
+      label: finalName,
       hour,
       minute,
       period,
-      title: 'Morning Wake Up • Tomorrow',
       enabled: true,
       repeatDays,
-      motivationalImage:
-        editingAlarm?.motivationalImage ||
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-      motivationalQuote:
-        editingAlarm?.motivationalQuote ||
-        createAlarmString.quote,
       challengeType,
       difficulty,
-      snoozePenalty,
+      soundUri,
+      soundTitle,
+      vibrationEnabled,
+      motivationalQuote: createAlarmString.defaultQuote,
       createdAt: editingAlarm?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     dispatch(saveAlarm(alarmToSave));
-    await AlarmService.schedule(alarmToSave);
+    AlarmService.schedule(alarmToSave);
+
+    // Persist full alarm items list so it survives app kills and device reboots
+    const otherAlarms = alarms.filter(a => a.id !== alarmToSave.id);
+    const updatedAlarms = [alarmToSave, ...otherAlarms];
+    AlarmService.saveAllAlarms(updatedAlarms);
+
     navigation.goBack();
   };
 
+  const handleSave = async () => {
+    const canOverlay = await AlarmService.canDrawOverlays();
+    const canFullScreen = await AlarmService.canUseFullScreenIntent();
+
+    if (!canOverlay || !canFullScreen) {
+      setIsPermissionModalVisible(true);
+    } else {
+      executeSave();
+    }
+  };
+
+  const handleOpenPermissionSettings = async () => {
+    setIsPermissionModalVisible(false);
+    await AlarmService.openLockScreenPermissionSettings();
+    executeSave();
+  };
+
+  const handleDismissPermissionModal = () => {
+    setIsPermissionModalVisible(false);
+  };
+
+  const handleSaveAnyway = () => {
+    setIsPermissionModalVisible(false);
+    executeSave();
+  };
+
+  const handleDelete = () => {
+    if (!editingAlarm) return;
+    Alert.alert(
+      createAlarmString.deleteAlarmTitle,
+      createAlarmString.deleteAlarmMsg,
+      [
+        { text: commonString.cancel, style: 'cancel' },
+        {
+          text: createAlarmString.deleteBtn,
+          style: 'destructive',
+          onPress: () => {
+            AlarmService.stopPreview();
+            AlarmService.cancel(editingAlarm.id);
+            dispatch(deleteAlarm(editingAlarm.id));
+            const updatedAlarms = alarms.filter(a => a.id !== editingAlarm.id);
+            AlarmService.saveAllAlarms(updatedAlarms);
+            navigation.goBack();
+          },
+        },
+      ],
+    );
+  };
+
+  const getPuzzlePreviewText = () => {
+    switch (challengeType) {
+      case 'knife':
+        return createAlarmString.knifeSample;
+      case 'hockey':
+        return createAlarmString.hockeySample;
+      case 'stack':
+        return createAlarmString.stackSample;
+      case 'pong':
+        return createAlarmString.pongSample;
+      case 'math':
+        return createAlarmString.mathSampleEquation;
+      case 'mystery':
+        return createAlarmString.mysterySample;
+      case 'memory':
+        return createAlarmString.memorySample;
+      case 'pattern':
+        return createAlarmString.patternSample;
+      case 'reaction':
+        return createAlarmString.reactionSample;
+      default:
+        return createAlarmString.knifeSample;
+    }
+  };
+
   return (
-    <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaContainer
+      edges={['top', 'left', 'right', 'bottom']}
+      backgroundColor={Colors.creamBackground}>
       <CustomHeader
-        title={createAlarmString.headerTitle}
-        showBack={true}
-        onBackPress={() => navigation.goBack()}
-        rightComponent={
-          <View style={styles.headerActionsRow}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerCancelBtn}>
-              <AppText style={styles.headerCancelText}>Cancel</AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSave}
-              style={styles.headerSaveBtn}>
-              <AppText style={styles.headerSaveText}>Save</AppText>
-            </TouchableOpacity>
-          </View>
+        title={
+          editingAlarm
+            ? createAlarmString.editHeaderTitle
+            : createAlarmString.headerTitle
         }
+        showBack={true}
+        showAvatar={false}
+        onBackPress={() => {
+          AlarmService.stopPreview();
+          navigation.goBack();
+        }}
       />
 
       <ScrollView
-        style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Status Badge Row */}
-        <View style={styles.statusRow}>
-          <View style={styles.questSetupPill}>
-            <AppText>⭐</AppText>
-            <AppText style={styles.questSetupText}>
-              {createAlarmString.questSetup}
-            </AppText>
-          </View>
-
-          <View style={styles.heroModePill}>
-            <AppText style={styles.heroModeText}>
-              {createAlarmString.heroMode}
-            </AppText>
-          </View>
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        {/* Rest Calculated Pill */}
+        <View style={styles.restPillContainer}>
+          <AppIcon
+            name="moon"
+            size="xs"
+            color={Colors.brandOrange}
+            style={styles.restPillIcon}
+          />
+          <AppText style={styles.restPillText}>{restCalculatedText}</AppText>
         </View>
 
-        {/* Wake Horizon Card */}
-        <View style={styles.horizonCard}>
-          <AppText style={styles.horizonLabel}>
-            {createAlarmString.wakeHorizon}
-          </AppText>
+        {/* 1. Time Adjuster Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.timeAdjusterRow}>
+            <TouchableOpacity
+              style={styles.timeStepBtn}
+              onPress={() => adjustMinutes(-1)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.minus15m}
+              accessibilityRole="button">
+              <AppIcon name="minus" size="lg" color={Colors.textDark} />
+            </TouchableOpacity>
 
-          <View style={styles.timePickerRow}>
-            <AppText style={styles.timeBigDigit}>{hour}</AppText>
-            <AppText style={styles.timeColon}>:</AppText>
-            <AppText style={styles.timeBigDigit}>{minute}</AppText>
+            <TouchableOpacity
+              style={styles.timeDisplayCenter}
+              onPress={() => setIsTimeModalVisible(true)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={`${createAlarmString.selectTimeModalTitle}: ${hour}:${minute} ${period}`}
+              accessibilityRole="button">
+              <AppText style={styles.timeDigitsText}>
+                {hour}:{minute}
+              </AppText>
+              <AppText style={styles.periodText}>{period}</AppText>
+            </TouchableOpacity>
 
-            <View style={styles.periodToggleContainer}>
-              <TouchableOpacity
-                onPress={() => setPeriod('AM')}
-                style={[
-                  styles.periodButton,
-                  period === 'AM' && styles.periodButtonActive,
-                ]}>
-                <AppText
-                  style={[
-                    styles.periodButtonText,
-                    period === 'AM' && styles.periodButtonTextActive,
-                  ]}>
-                  {createAlarmString.am}
-                </AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setPeriod('PM')}
-                style={[
-                  styles.periodButton,
-                  period === 'PM' && styles.periodButtonActive,
-                ]}>
-                <AppText
-                  style={[
-                    styles.periodButtonText,
-                    period === 'PM' && styles.periodButtonTextActive,
-                  ]}>
-                  {createAlarmString.pm}
-                </AppText>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.timeStepBtn}
+              onPress={() => adjustMinutes(1)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.plus15m}
+              accessibilityRole="button">
+              <AppIcon name="plus" size="lg" color={Colors.textDark} />
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.scrubbersRow}>
+          {/* Quick Adjustment Chips */}
+          <View style={styles.quickChipsRow}>
             <TouchableOpacity
-              onPress={() => handleAdjustTime(-15)}
-              style={styles.scrubberBtn}>
-              <AppText style={styles.scrubberBtnText}>
+              style={styles.quickChipBtn}
+              onPress={() => adjustMinutes(-15)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.minus15m}
+              accessibilityRole="button">
+              <AppText style={styles.quickChipText}>
                 {createAlarmString.minus15m}
               </AppText>
             </TouchableOpacity>
 
-            <View style={styles.restBadge}>
-              <AppText>🌙</AppText>
-              <AppText style={styles.restBadgeText}>
-                {createAlarmString.restCalculated}
+            <TouchableOpacity
+              style={styles.quickChipBtn}
+              onPress={() => adjustMinutes(-5)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.minus5m}
+              accessibilityRole="button">
+              <AppText style={styles.quickChipText}>
+                {createAlarmString.minus5m}
               </AppText>
-            </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => handleAdjustTime(15)}
-              style={styles.scrubberBtn}>
-              <AppText style={styles.scrubberBtnText}>
+              style={styles.quickChipBtn}
+              onPress={() => adjustMinutes(5)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.plus5m}
+              accessibilityRole="button">
+              <AppText style={styles.quickChipText}>
+                {createAlarmString.plus5m}
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickChipBtn}
+              onPress={() => adjustMinutes(15)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.plus15m}
+              accessibilityRole="button">
+              <AppText style={styles.quickChipText}>
                 {createAlarmString.plus15m}
               </AppText>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Repeat Rhythm Card */}
-        <View style={styles.repeatCard}>
-          <View style={styles.sectionRowBetween}>
-            <AppText style={styles.cardSectionTitle}>
-              {createAlarmString.repeatRhythm}
-            </AppText>
-            <View style={styles.activeDaysBadge}>
-              <AppText style={styles.activeDaysBadgeText}>
-                {createAlarmString.weekdaysActive}
-              </AppText>
-            </View>
+        {/* 2. Alarm Name & Schedule Card */}
+        <View style={styles.sectionCard}>
+          <AppText style={styles.fieldLabel}>
+            {createAlarmString.alarmNameLabel}
+          </AppText>
+          <View style={styles.inputBox}>
+            <AppIcon
+              name="alarmClock"
+              size="sm"
+              color={Colors.textMuted}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.textInputField}
+              value={alarmName}
+              onChangeText={setAlarmName}
+              placeholder={createAlarmString.defaultAlarmName}
+              placeholderTextColor={Colors.textMuted}
+              maxLength={40}
+              accessible={true}
+              accessibilityLabel={createAlarmString.alarmNameLabel}
+            />
           </View>
 
-          <View style={styles.daysRow}>
-            {DAYS.map((day, idx) => {
-              const isActive = repeatDays.includes(idx);
+          <View style={styles.repeatHeaderRow}>
+            <AppText style={styles.repeatScheduleTitle}>
+              {createAlarmString.repeatScheduleLabel}
+            </AppText>
+            <AppText style={styles.repeatScheduleValue}>
+              {getRepeatSubtitle()}
+            </AppText>
+          </View>
+
+          {/* Day of Week Chips */}
+          <View style={styles.daysGrid}>
+            {DAYS_SHORT.map((day, idx) => {
+              const isSelected = repeatDays.includes(idx);
               return (
                 <TouchableOpacity
                   key={`day-${idx}`}
-                  onPress={() => handleToggleDay(idx)}
                   style={[
-                    styles.dayCircle,
-                    isActive && styles.dayCircleActive,
-                  ]}>
+                    styles.dayChip,
+                    isSelected && styles.dayChipSelected,
+                  ]}
+                  onPress={() => toggleDay(idx)}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityLabel={`Day ${day}`}
+                  accessibilityRole="button">
                   <AppText
                     style={[
-                      styles.dayText,
-                      isActive && styles.dayTextActive,
+                      styles.dayChipText,
+                      isSelected && styles.dayChipTextSelected,
                     ]}>
                     {day}
                   </AppText>
@@ -251,270 +534,403 @@ const CreateAlarmScreen: FC = () => {
           </View>
         </View>
 
-        {/* Motivational Card */}
-        <View style={styles.sectionHeaderLabelRow}>
-          <AppText style={styles.sectionTitleMain}>
-            {createAlarmString.motivationHeading}
-          </AppText>
-          <View style={styles.xpPlusBadge}>
-            <AppText style={styles.xpPlusText}>
-              {createAlarmString.motivationXp}
+        {/* 3. Vision & Motivation Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.cardHeaderRow}>
+            <AppText style={styles.cardHeaderTitle}>
+              {createAlarmString.visionMotivationHeading}
             </AppText>
-          </View>
-        </View>
 
-        <View style={styles.visionBoxCard}>
-          <View style={styles.visionPhotoPlaceholder}>
-            <View style={styles.visionPhotoBg} />
-            <View style={styles.visionTagTopLeft}>
-              <AppText style={styles.visionTagText}>
-                {createAlarmString.dreamFutureTag}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={createAlarmString.changePhoto}
+              accessibilityRole="button">
+              <AppText style={styles.actionTextBtn}>
+                {createAlarmString.changePhoto}
               </AppText>
-            </View>
-            <View style={styles.visionPhotoBottomRow}>
-              <AppText style={styles.visionTitleText}>
-                {createAlarmString.studioSanctuary}
-              </AppText>
-              <AppText style={styles.visionTitleText}>
-                {createAlarmString.sunriseLockscreen}
-              </AppText>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.quoteBox}>
-            <AppText style={styles.quoteBoxText}>
-              {createAlarmString.quote}
-            </AppText>
-            <AppText style={styles.quoteMantraTag}>
-              {createAlarmString.dailyMantra}
-            </AppText>
-          </View>
-        </View>
-
-        {/* Challenge Selector */}
-        <View style={styles.sectionHeaderLabelRow}>
-          <AppText style={styles.sectionTitleMain}>
-            {createAlarmString.wakeUpChallengeHeading}
-          </AppText>
-          <AppText style={styles.activeDaysBadgeText}>
-            {createAlarmString.mandatoryQuest}
-          </AppText>
-        </View>
-
-        {/* Math Challenge */}
-        <TouchableOpacity
-          onPress={() => setChallengeType('math')}
-          style={[
-            styles.challengeCardOption,
-            challengeType === 'math' && styles.challengeCardOptionSelected,
-          ]}>
-          <View style={styles.challengeLeftCol}>
-            <View
-              style={[
-                styles.challengeIconCircle,
-                challengeType !== 'math' &&
-                  styles.challengeIconCircleInactive,
-              ]}>
-              <AppText>🧮</AppText>
-            </View>
-            <View>
-              <View style={styles.challengeTitleRow}>
-                <AppText style={styles.challengeTitle}>
-                  {createAlarmString.challengeMath}
+          <View style={styles.visionImageBox}>
+            <View style={styles.visionImageOverlay} />
+            <View style={styles.visionOverlayBottom}>
+              <View>
+                <AppText style={styles.wakeIntentionTag}>
+                  {createAlarmString.wakeUpIntention}
                 </AppText>
-                {challengeType === 'math' ? (
-                  <View style={styles.challengeActiveBadge}>
-                    <AppText style={styles.challengeActiveBadgeText}>
-                      {createAlarmString.activeTag}
-                    </AppText>
-                  </View>
-                ) : null}
+                <AppText style={styles.quoteText}>
+                  {createAlarmString.defaultQuote}
+                </AppText>
               </View>
-              <AppText style={styles.challengeDesc}>
-                {createAlarmString.challengeMathDesc}
-              </AppText>
+              <AppIcon name="pencil" size="sm" color={Colors.white} />
             </View>
           </View>
-          <View
-            style={[
-              styles.challengeRadioCircle,
-              challengeType !== 'math' &&
-                styles.challengeRadioCircleInactive,
-            ]}>
-            {challengeType === 'math' ? (
-              <AppText style={styles.radioCheckmarkText}>✓</AppText>
-            ) : null}
-          </View>
-        </TouchableOpacity>
+        </View>
 
-        {/* Memory Grid */}
-        <TouchableOpacity
-          onPress={() => setChallengeType('memory')}
-          style={[
-            styles.challengeCardOption,
-            challengeType === 'memory' && styles.challengeCardOptionSelected,
-          ]}>
-          <View style={styles.challengeLeftCol}>
-            <View
-              style={[
-                styles.challengeIconCircle,
-                challengeType !== 'memory' &&
-                  styles.challengeIconCircleInactive,
-              ]}>
-              <AppText>🧩</AppText>
-            </View>
+        {/* 4. Wake-Up Challenge Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.cardHeaderRow}>
             <View>
-              <AppText style={styles.challengeTitle}>
-                {createAlarmString.challengeMemory}
+              <AppText style={styles.cardHeaderTitle}>
+                {createAlarmString.wakeUpChallengeHeading}
               </AppText>
-              <AppText style={styles.challengeDesc}>
-                {createAlarmString.challengeMemoryDesc}
-              </AppText>
-            </View>
-          </View>
-          <View
-            style={[
-              styles.challengeRadioCircle,
-              challengeType !== 'memory' &&
-                styles.challengeRadioCircleInactive,
-            ]}>
-            {challengeType === 'memory' ? (
-              <AppText style={styles.radioCheckmarkText}>✓</AppText>
-            ) : null}
-          </View>
-        </TouchableOpacity>
-
-        {/* Pattern Match */}
-        <TouchableOpacity
-          onPress={() => setChallengeType('pattern')}
-          style={[
-            styles.challengeCardOption,
-            challengeType === 'pattern' &&
-              styles.challengeCardOptionSelected,
-          ]}>
-          <View style={styles.challengeLeftCol}>
-            <View
-              style={[
-                styles.challengeIconCircle,
-                challengeType !== 'pattern' &&
-                  styles.challengeIconCircleInactive,
-              ]}>
-              <AppText>🏁</AppText>
-            </View>
-            <View>
-              <AppText style={styles.challengeTitle}>
-                {createAlarmString.challengePattern}
-              </AppText>
-              <AppText style={styles.challengeDesc}>
-                {createAlarmString.challengePatternDesc}
+              <AppText style={styles.cardHeaderSubtitle}>
+                {createAlarmString.wakeUpChallengeSub}
               </AppText>
             </View>
           </View>
-          <View
-            style={[
-              styles.challengeRadioCircle,
-              challengeType !== 'pattern' &&
-                styles.challengeRadioCircleInactive,
-            ]}>
-            {challengeType === 'pattern' ? (
-              <AppText style={styles.radioCheckmarkText}>✓</AppText>
-            ) : null}
-          </View>
-        </TouchableOpacity>
 
-        {/* Quest Intensity */}
-        <View style={styles.intensityCard}>
-          <View style={styles.sectionRowBetween}>
-            <AppText style={styles.cardSectionTitle}>
-              {createAlarmString.questIntensity}
-            </AppText>
-            <AppText style={styles.xpPlusText}>
-              {createAlarmString.rewardIntensity}
-            </AppText>
-          </View>
+          {/* 6 Challenge Grid (3 rows x 2 columns) */}
+          <View style={styles.challengesGrid}>
+            {CHALLENGES.map(item => {
+              const isSelected = challengeType === item.type;
+              return (
+                <TouchableOpacity
+                  key={item.type}
+                  style={[
+                    styles.challengeCard,
+                    isSelected && styles.challengeCardSelected,
+                  ]}
+                  onPress={() => setChallengeType(item.type)}
+                  activeOpacity={0.7}
+                  accessible={true}
+                  accessibilityLabel={item.label}
+                  accessibilityRole="button">
+                  <View style={styles.challengeCardTop}>
+                    <View
+                      style={[
+                        styles.challengeIconBox,
+                        isSelected && styles.challengeIconBoxSelected,
+                      ]}>
+                      <AppIcon
+                        name={challengeIcons[item.type]}
+                        size="md"
+                        color={isSelected ? Colors.white : Colors.brandOrange}
+                      />
+                    </View>
+                    <View
+                      style={[
+                        styles.challengeCheckCircle,
+                        isSelected && styles.challengeCheckCircleSelected,
+                      ]}>
+                      {isSelected ? (
+                        <AppIcon
+                          name="check"
+                          size="xs"
+                          strokeWidth={3}
+                          color={Colors.white}
+                        />
+                      ) : null}
+                    </View>
+                  </View>
 
-          <View style={styles.segmentedControl}>
-            {(['easy', 'medium', 'hard'] as ChallengeDifficulty[]).map(
-              diff => {
-                const isSelected = difficulty === diff;
-                return (
-                  <TouchableOpacity
-                    key={diff}
-                    onPress={() => setDifficulty(diff)}
-                    style={[
-                      styles.segmentedBtn,
-                      isSelected && styles.segmentedBtnActive,
-                    ]}>
+                  <View style={styles.challengeMetaBox}>
                     <AppText
                       style={[
-                        styles.segmentedBtnText,
-                        isSelected && styles.segmentedBtnTextActive,
+                        styles.challengeTitle,
+                        isSelected && styles.challengeTitleSelected,
+                      ]}
+                      numberOfLines={1}>
+                      {item.label}
+                    </AppText>
+                    <AppText
+                      style={[
+                        styles.challengeSubtitle,
+                        isSelected && styles.challengeSubtitleSelected,
+                      ]}
+                      numberOfLines={1}>
+                      {item.subtitle}
+                    </AppText>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Difficulty Level Segment */}
+          <View style={styles.difficultyRow}>
+            <AppText style={styles.difficultyLabel}>
+              {createAlarmString.difficultyLevel}
+            </AppText>
+
+            <View style={styles.difficultySegment}>
+              {DIFFICULTIES.map(item => {
+                const isSelected = difficulty === item.level;
+                return (
+                  <TouchableOpacity
+                    key={item.level}
+                    style={[
+                      styles.diffBtn,
+                      isSelected && styles.diffBtnSelected,
+                    ]}
+                    onPress={() => setDifficulty(item.level)}
+                    activeOpacity={0.8}>
+                    <AppText
+                      style={[
+                        styles.diffBtnText,
+                        isSelected && styles.diffBtnTextSelected,
                       ]}>
-                      {diff === 'easy'
-                        ? createAlarmString.easy
-                        : diff === 'medium'
-                        ? createAlarmString.medium
-                        : createAlarmString.hard}
+                      {item.label}
                     </AppText>
                   </TouchableOpacity>
                 );
-              },
-            )}
+              })}
+            </View>
+          </View>
+
+          {/* Dynamic Mission Preview Bar */}
+          <View style={styles.puzzlePreviewBar}>
+            <View style={styles.puzzlePreviewLeft}>
+              <AppIcon
+                name="clock"
+                size="sm"
+                color={Colors.textMuted}
+                style={styles.puzzleTimerIcon}
+              />
+              <AppText style={styles.puzzleEquationText} numberOfLines={2}>
+                {getPuzzlePreviewText()}
+              </AppText>
+            </View>
+            <AppText style={styles.timeLimitText}>
+              {createAlarmString.timeLimit30s}
+            </AppText>
           </View>
         </View>
 
-        {/* Emergency Snooze Penalty */}
-        <View style={styles.snoozeCard}>
-          <View style={styles.snoozePenaltyRow}>
-            <View style={styles.snoozeLeft}>
-              <View style={styles.warningIconBox}>
-                <AppText>⚠️</AppText>
+        {/* 5. Sound & Physical Affordances Card */}
+        <View style={styles.sectionCard}>
+          {/* Sound Row */}
+          <View style={styles.settingRow}>
+            <TouchableOpacity
+              style={styles.soundInfoTouchable}
+              onPress={() => setIsSoundModalVisible(true)}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={`${createAlarmString.soundHeading}: ${soundTitle}`}
+              accessibilityRole="button">
+              <View style={styles.settingIconCircle}>
+                <AppIcon name="music" size="md" color={Colors.brandOrange} />
+              </View>
+              <View style={styles.soundTextCol}>
+                <AppText style={styles.settingTitle}>
+                  {createAlarmString.soundHeading}
+                </AppText>
+                <AppText style={styles.settingSub} numberOfLines={1}>
+                  {soundTitle}
+                </AppText>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.previewSoundBtn,
+                isPlayingPreview && styles.previewSoundBtnActive,
+              ]}
+              onPress={handleTogglePreview}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityLabel={
+                isPlayingPreview
+                  ? createAlarmString.stopPreview
+                  : createAlarmString.preview
+              }
+              accessibilityRole="button">
+              <AppText
+                style={[
+                  styles.previewSoundText,
+                  isPlayingPreview && styles.previewSoundTextActive,
+                ]}>
+                {isPlayingPreview
+                  ? createAlarmString.stopPreview
+                  : createAlarmString.preview}
+              </AppText>
+              <AppIcon
+                name={isPlayingPreview ? 'square' : 'play'}
+                size="xs"
+                color={isPlayingPreview ? Colors.white : Colors.brandOrange}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Vibration Row */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingRowLeft}>
+              <View
+                style={[
+                  styles.settingIconCircle,
+                  styles.settingIconCircleGray,
+                ]}>
+                <AppIcon name="vibrate" size="md" color={Colors.textSecondary} />
               </View>
               <View>
-                <AppText style={styles.snoozeHeaderTitle}>
-                  {createAlarmString.snoozePenaltyHeader}
+                <AppText style={styles.settingTitle}>
+                  {createAlarmString.vibrationHeading}
                 </AppText>
-                <AppText style={styles.snoozeTagPenalty}>
-                  {createAlarmString.snoozePenaltyPill}
+                <AppText style={styles.settingSub}>
+                  {createAlarmString.vibrationSub}
                 </AppText>
               </View>
             </View>
 
             <TouchableOpacity
-              onPress={() => setSnoozePenalty(!snoozePenalty)}
               style={[
-                styles.snoozeToggleTrack,
-                !snoozePenalty && styles.snoozeToggleTrackOff,
-              ]}>
+                styles.toggleTrack,
+                !vibrationEnabled && styles.toggleTrackOff,
+              ]}
+              onPress={() => setVibrationEnabled(!vibrationEnabled)}
+              activeOpacity={0.8}
+              accessible={true}
+              accessibilityLabel={createAlarmString.vibrationHeading}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: vibrationEnabled }}>
               <View
                 style={[
-                  styles.snoozeToggleThumb,
-                  !snoozePenalty && styles.snoozeToggleThumbOff,
+                  styles.toggleThumb,
+                  !vibrationEnabled && styles.toggleThumbOff,
                 ]}
               />
             </TouchableOpacity>
           </View>
-
-          <View style={styles.streakNoticePill}>
-            <AppText style={styles.streakNoticeText}>
-              🛡️ {createAlarmString.streakGuaranteeNotice}
-            </AppText>
-          </View>
         </View>
 
-        {/* Save Alarm Bottom Button */}
+        {/* Primary Action: Full-width Save Button */}
         <TouchableOpacity
+          style={styles.saveAlarmBtn}
           onPress={handleSave}
-          activeOpacity={0.8}
-          style={styles.saveAlarmBottomBtn}
+          activeOpacity={0.85}
           accessible={true}
           accessibilityLabel={createAlarmString.saveAlarmBtn}
           accessibilityRole="button">
           <AppText style={styles.saveAlarmBtnText}>
-            ⏰ {createAlarmString.saveAlarmBtn}
+            {createAlarmString.saveAlarmBtn}
           </AppText>
         </TouchableOpacity>
+
+        {/* Delete button (if editing existing alarm) */}
+        {editingAlarm && (
+          <TouchableOpacity
+            style={styles.deleteAlarmBtn}
+            onPress={handleDelete}
+            activeOpacity={0.8}
+            accessible={true}
+            accessibilityLabel={createAlarmString.deleteAlarmTitle}
+            accessibilityRole="button">
+            <AppIcon name="trash" size="sm" color={Colors.error} />
+            <AppText style={styles.deleteAlarmBtnText}>
+              {createAlarmString.deleteAlarmTitle}
+            </AppText>
+          </TouchableOpacity>
+        )}
       </ScrollView>
+
+      {/* Hour & Minute Modal Selection */}
+      <TimePickerModal
+        visible={isTimeModalVisible}
+        initialHour={hour}
+        initialMinute={minute}
+        initialPeriod={period}
+        onConfirm={handleConfirmTime}
+        onCancel={() => setIsTimeModalVisible(false)}
+      />
+
+      {/* Sound Selection Bottom Modal */}
+      <Modal
+        visible={isSoundModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsSoundModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.soundModalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsSoundModalVisible(false)}>
+          <View style={styles.soundModalContainer}>
+            <View style={styles.soundModalIndicator} />
+
+            <View style={styles.soundModalHeader}>
+              <AppText style={styles.soundModalTitle}>
+                {createAlarmString.selectSoundTitle}
+              </AppText>
+              <AppText style={styles.soundModalSub}>
+                {createAlarmString.selectSoundSubtitle}
+              </AppText>
+            </View>
+
+            {/* Option 1: System Ringtones */}
+            <TouchableOpacity
+              style={styles.soundOptionBtn}
+              onPress={handlePickRingtone}
+              activeOpacity={0.8}
+              accessible={true}
+              accessibilityLabel={createAlarmString.soundRingtoneOption}
+              accessibilityRole="button">
+              <View style={styles.soundOptionLeft}>
+                <View style={styles.soundOptionIconCircle}>
+                  <AppIcon name="bell" size="md" color={Colors.brandOrange} />
+                </View>
+                <View style={styles.soundOptionTexts}>
+                  <AppText style={styles.soundOptionTitle}>
+                    {createAlarmString.soundRingtoneOption}
+                  </AppText>
+                  <AppText style={styles.soundOptionDesc}>
+                    {createAlarmString.soundDefault}
+                  </AppText>
+                </View>
+              </View>
+              <AppIcon name="chevronRight" size="md" color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            {/* Option 2: Device Songs / Music files */}
+            <TouchableOpacity
+              style={styles.soundOptionBtn}
+              onPress={handlePickAudioFile}
+              activeOpacity={0.8}
+              accessible={true}
+              accessibilityLabel={createAlarmString.soundDeviceMusicOption}
+              accessibilityRole="button">
+              <View style={styles.soundOptionLeft}>
+                <View
+                  style={[
+                    styles.soundOptionIconCircle,
+                    styles.soundOptionIconCirclePurple,
+                  ]}>
+                  <AppIcon name="folder" size="md" color={Colors.brandPurple} />
+                </View>
+                <View style={styles.soundOptionTexts}>
+                  <AppText style={styles.soundOptionTitle}>
+                    {createAlarmString.soundDeviceMusicOption}
+                  </AppText>
+                  <AppText style={styles.soundOptionDesc}>
+                    {createAlarmString.soundCustom}
+                  </AppText>
+                </View>
+              </View>
+              <AppIcon name="chevronRight" size="md" color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            {/* Cancel Button */}
+            <TouchableOpacity
+              style={styles.soundModalCancelBtn}
+              onPress={() => setIsSoundModalVisible(false)}
+              activeOpacity={0.8}>
+              <AppText style={styles.soundModalCancelText}>
+                {commonString.cancel}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Lock Screen & Background Overlay Permission Prompt Modal */}
+      <LockScreenPermissionModal
+        visible={isPermissionModalVisible}
+        isXiaomi={isXiaomi}
+        onOpenSettings={handleOpenPermissionSettings}
+        onDismiss={handleDismissPermissionModal}
+        onSecondaryAction={handleSaveAnyway}
+        primaryButtonText={lockScreenPermissionString.openSettingsBtn}
+        secondaryButtonText={lockScreenPermissionString.saveAnywayBtn}
+      />
     </SafeAreaContainer>
   );
 };

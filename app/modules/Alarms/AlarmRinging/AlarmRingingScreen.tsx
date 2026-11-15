@@ -1,5 +1,7 @@
 import React, { FC, memo } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ImageBackground, StyleSheet, View } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -8,10 +10,12 @@ import {
   SafeAreaContainer,
   SwipeToWake,
 } from '../../../components';
-import { alarmRingingString, Routes } from '../../../constants';
+import { alarmRingingString, Images, Routes } from '../../../constants';
 import { useAppSelector } from '../../../hooks';
+import { AlarmService } from '../../../services';
 import { RootStackParamList } from '../../../types';
 import { Colors } from '../../../theme/Colors';
+import { verticalScale } from '../../../theme/Metrics';
 import { styles } from './AlarmRingingScreenStyles';
 
 type AlarmRingingRouteProp = RouteProp<
@@ -20,15 +24,32 @@ type AlarmRingingRouteProp = RouteProp<
 >;
 type AlarmRingingNavProp = NativeStackNavigationProp<RootStackParamList>;
 
+const OVERLAY_GRADIENT = [
+  'rgba(11, 17, 24, 0.75)',
+  'rgba(11, 17, 24, 0.15)',
+  'rgba(11, 17, 24, 0.55)',
+  'rgba(11, 17, 24, 0.95)',
+];
+const OVERLAY_LOCATIONS = [0, 0.35, 0.65, 1];
+
 const AlarmRingingScreen: FC = () => {
   const navigation = useNavigation<AlarmRingingNavProp>();
   const route = useRoute<AlarmRingingRouteProp>();
+  const insets = useSafeAreaInsets();
 
   const alarms = useAppSelector(state => state.alarm.alarms);
-  const userStats = useAppSelector(state => state.gamification.userStats);
 
   const alarmId = route.params?.alarmId;
   const currentAlarm = alarms.find(a => a.id === alarmId) || alarms[0];
+  const imageSource = currentAlarm?.motivationalImage
+    ? { uri: currentAlarm.motivationalImage }
+    : Images.alarmDefaultBg;
+
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 
   const handleSwipeComplete = () => {
     navigation.replace(Routes.challenge, {
@@ -38,142 +59,70 @@ const AlarmRingingScreen: FC = () => {
 
   return (
     <SafeAreaContainer
-      edges={['top', 'left', 'right', 'bottom']}
+      edges={[]}
       backgroundColor={Colors.darkBg}
       isDark={true}>
-      <CustomHeader
-        title={alarmRingingString.headerTitle}
-        showBack={true}
-        onBackPress={() => navigation.goBack()}
-        isDark={true}
-      />
+      <ImageBackground
+        source={imageSource}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover">
+        <LinearGradient
+          colors={OVERLAY_GRADIENT}
+          locations={OVERLAY_LOCATIONS}
+          style={StyleSheet.absoluteFill}
+        />
+      </ImageBackground>
 
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}>
-        <View>
-          {/* Ringing Indicator Pill */}
-          <View style={styles.indicatorRow}>
-            <View style={styles.ringingPill}>
-              <AppText style={styles.ringingBell}>🔔</AppText>
-              <AppText style={styles.ringingPillText}>
-                {alarmRingingString.ringingBadge}
-              </AppText>
-            </View>
+      <View
+        style={[
+          styles.contentContainer,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom + verticalScale(24),
+          },
+        ]}>
+        <CustomHeader
+          title={alarmRingingString.headerTitle}
+          showBack={true}
+          onBackPress={() => {
+            AlarmService.stopAlarmSound();
+            navigation.goBack();
+          }}
+          isDark={true}
+        />
+
+        {/* Large Time Display */}
+        <View style={styles.timeContainer}>
+          <View style={styles.timeRow}>
+            <AppText style={styles.timeBigText}>
+              {currentAlarm
+                ? `${currentAlarm.hour}:${currentAlarm.minute}`
+                : alarmRingingString.time}
+            </AppText>
+            <AppText style={styles.timePeriod}>
+              {currentAlarm?.period || alarmRingingString.am}
+            </AppText>
           </View>
 
-          {/* Large Time Display */}
-          <View style={styles.timeContainer}>
-            <View style={styles.timeRow}>
-              <AppText style={styles.timeBigText}>
-                {currentAlarm
-                  ? `${currentAlarm.hour}:${currentAlarm.minute}`
-                  : alarmRingingString.time}
-              </AppText>
-              <AppText style={styles.timePeriod}>
-                {currentAlarm?.period || alarmRingingString.am}
-              </AppText>
-            </View>
-
-            <View style={styles.dateLevelRow}>
-              <AppText style={styles.dateText}>
-                {alarmRingingString.dateLevel}
-              </AppText>
-              <View style={styles.dotDivider} />
-              <AppText style={styles.levelText}>
-                {`LEVEL ${userStats.level} ASCENDANT`}
-              </AppText>
-            </View>
+          <View style={styles.dateLevelRow}>
+            <AppText style={styles.dateText}>{todayLabel}</AppText>
           </View>
+        </View>
 
-          {/* Motivational Vision Card */}
-          <View style={styles.visionCard}>
-            <View style={styles.visionImageContainer}>
-              <View style={styles.visionImageBackground} />
-              <View style={styles.visionGradient} />
+        <View style={styles.spacer} />
 
-              <View style={styles.wakeCallBadge}>
-                <AppText>⭐</AppText>
-                <AppText style={styles.wakeCallText}>
-                  {alarmRingingString.todaysWakeCall}
-                </AppText>
-              </View>
-
-              <View style={styles.xpBoostBadge}>
-                <AppText style={styles.xpBoostText}>
-                  {alarmRingingString.xpBoost}
-                </AppText>
-              </View>
-            </View>
-
-            <View style={styles.visionContent}>
-              <View style={styles.quoteRow}>
-                <AppText style={styles.quoteIcon}>“</AppText>
-                <AppText style={styles.quoteText}>
-                  {currentAlarm?.motivationalQuote ||
-                    alarmRingingString.quote}
-                </AppText>
-              </View>
-
-              <View style={styles.soundRow}>
-                <View style={styles.soundLeft}>
-                  <View style={styles.musicDisc}>
-                    <AppText>🎵</AppText>
-                  </View>
-                  <View>
-                    <AppText style={styles.soundTitle}>
-                      {alarmRingingString.soundTitle}
-                    </AppText>
-                    <AppText style={styles.soundSub}>
-                      {alarmRingingString.soundSub}
-                    </AppText>
-                  </View>
-                </View>
-
-                <View style={styles.equalizerContainer}>
-                  <View style={styles.equalizerBar} />
-                  <View
-                    style={[styles.equalizerBar, styles.equalizerBarAlt]}
-                  />
-                  <View style={styles.equalizerBar} />
-                  <View
-                    style={[styles.equalizerBar, styles.equalizerBarAlt]}
-                  />
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Mental Gate Required */}
-          <View style={styles.mentalGateRow}>
-            <View style={styles.mentalGateLeft}>
-              <View style={styles.mentalGateIconBox}>
-                <AppText>🧠</AppText>
-              </View>
-              <View>
-                <AppText style={styles.mentalGateTitle}>
-                  {alarmRingingString.mentalGateTitle}
-                </AppText>
-                <AppText style={styles.mentalGateSub}>
-                  {alarmRingingString.mentalGateSub}
-                </AppText>
-              </View>
-            </View>
-
-            <View style={styles.timedBadge}>
-              <AppText style={styles.timedBadgeText}>
-                {alarmRingingString.timedBadge}
-              </AppText>
-            </View>
-          </View>
+        {/* Motivational Quote */}
+        <View style={styles.quoteRow}>
+          <AppText style={styles.quoteText}>
+            {currentAlarm?.motivationalQuote || alarmRingingString.quote}
+          </AppText>
         </View>
 
         {/* Swipe To Wake Interactive Slider */}
         <SwipeToWake onSwipeComplete={handleSwipeComplete} />
-      </ScrollView>
+      </View>
     </SafeAreaContainer>
   );
 };
 
 export default memo(AlarmRingingScreen);
-
