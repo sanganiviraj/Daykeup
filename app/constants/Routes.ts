@@ -4,6 +4,7 @@ const Routes = {
   mainStack: 'MainStack',
 
   // Screens
+  onboarding: 'OnboardingScreen',
   home: 'HomeScreen',
   alarms: 'AlarmsScreen',
   createAlarm: 'CreateAlarmScreen',
@@ -14,6 +15,8 @@ const Routes = {
   hockeyGame: 'HockeyGameScreen',
   stackGame: 'StackGameScreen',
   pongGame: 'PongGameScreen',
+  truckGame: 'TruckGameScreen',
+  duelGame: 'DuelGameScreen',
   success: 'SuccessScreen',
   failure: 'FailureScreen',
 } as const;

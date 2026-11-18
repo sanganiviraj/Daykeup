@@ -65,6 +65,30 @@ export const getCurrentTime12 = (date: Date = new Date()): Time12 => {
   };
 };
 
+const MINUTES_PER_DAY = 24 * 60;
+
+// Today as a Dayekup day index (0: Mon ... 6: Sun). New alarms repeat on this day only by default.
+export const getTodayDayIndex = (date: Date = new Date()): number => {
+  const jsDay = date.getDay();
+  return jsDay === 0 ? 6 : jsDay - 1;
+};
+
+// Converts minutes since midnight to a 12-hour time. Wraps around midnight in both directions.
+export const minutesToTime12 = (totalMinutes: number): Time12 => {
+  const normalized =
+    ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const hours24 = Math.floor(normalized / 60);
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  return {
+    hour: formatTwoDigits(hours12),
+    minute: formatTwoDigits(normalized % 60),
+    period: hours24 >= 12 ? 'PM' : 'AM',
+  };
+};
+
+export const formatTime12 = ({ hour, minute, period }: Time12): string =>
+  `${hour}:${minute} ${period}`;
+
 export const calculateRestDuration = (
   targetHour: string,
   targetMinute: string,

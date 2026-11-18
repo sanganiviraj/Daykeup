@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import alarmReducer from './slices/alarm-slice/AlarmSlice';
 import gamificationReducer from './slices/gamification-slice/GamificationSlice';
+import onboardingReducer from './slices/onboarding-slice/OnboardingSlice';
 
 export const store = configureStore({
   reducer: {
     alarm: alarmReducer,
     gamification: gamificationReducer,
+    onboarding: onboardingReducer,
   },
 });
 

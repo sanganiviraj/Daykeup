@@ -7,6 +7,8 @@ const AppText: FC<AppTextProps> = ({
   children,
   style,
   numberOfLines,
+  adjustsFontSizeToFit,
+  minimumFontScale,
   accessible = true,
   accessibilityLabel,
   accessibilityRole = 'text',
@@ -16,6 +18,8 @@ const AppText: FC<AppTextProps> = ({
     <Text
       style={[styles.text, style]}
       numberOfLines={numberOfLines}
+      adjustsFontSizeToFit={adjustsFontSizeToFit}
+      minimumFontScale={minimumFontScale}
       accessible={accessible}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole}

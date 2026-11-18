@@ -36,6 +36,7 @@ import {
   calculateRestDuration,
   formatTwoDigits,
   getCurrentTime12,
+  getTodayDayIndex,
 } from '../../../utils';
 import { Colors } from '../../../theme/Colors';
 import { styles } from './CreateAlarmScreenStyles';
@@ -57,6 +58,8 @@ const CHALLENGES: {
   { type: 'hockey', label: createAlarmString.challengeHockey, subtitle: createAlarmString.subHockey },
   { type: 'stack', label: createAlarmString.challengeStack, subtitle: createAlarmString.subStack },
   { type: 'pong', label: createAlarmString.challengePong, subtitle: createAlarmString.subPong },
+  { type: 'truck', label: createAlarmString.challengeTruck, subtitle: createAlarmString.subTruck },
+  { type: 'duel', label: createAlarmString.challengeDuel, subtitle: createAlarmString.subDuel },
   { type: 'math', label: createAlarmString.challengeMath, subtitle: createAlarmString.subMath },
   { type: 'mystery', label: createAlarmString.challengeMystery, subtitle: createAlarmString.subMystery },
 ];
@@ -104,7 +107,7 @@ const CreateAlarmScreen: FC = () => {
     );
   }, [hour, minute, period]);
   const [repeatDays, setRepeatDays] = useState<number[]>(
-    editingAlarm?.repeatDays || [0, 1, 2, 3, 4],
+    editingAlarm?.repeatDays || [getTodayDayIndex()],
   );
   const [challengeType, setChallengeType] = useState<ChallengeType>(
     editingAlarm?.challengeType || 'math',
@@ -335,6 +338,10 @@ const CreateAlarmScreen: FC = () => {
         return createAlarmString.stackSample;
       case 'pong':
         return createAlarmString.pongSample;
+      case 'truck':
+        return createAlarmString.truckSample;
+      case 'duel':
+        return createAlarmString.duelSample;
       case 'math':
         return createAlarmString.mathSampleEquation;
       case 'mystery':

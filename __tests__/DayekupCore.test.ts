@@ -141,6 +141,14 @@ describe('AlarmService Integration', () => {
     expect(cleared).toBe(true);
   });
 
+  it('silences the alarm during the challenge and brings it back if time runs out', async () => {
+    const paused = await AlarmService.pauseAlarmSound();
+    expect(paused).toBe(true);
+
+    const resumed = await AlarmService.resumeAlarmSound('content://media/alarm.mp3', true);
+    expect(resumed).toBe(true);
+  });
+
   it('supports sound preview playback and stopping', async () => {
     const played = await AlarmService.playPreview('content://media/test.mp3');
     expect(played).toBe(true);

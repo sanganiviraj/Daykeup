@@ -30,6 +30,9 @@ export const gamificationSlice = createSlice({
         state.userStats.level += 1;
       }
     },
+    setUserName: (state, action: PayloadAction<string>) => {
+      state.userStats.name = action.payload;
+    },
     incrementStreak: state => {
       state.userStats.streak += 1;
     },
@@ -50,6 +53,7 @@ export const gamificationSlice = createSlice({
 
 export const {
   awardWakePoints,
+  setUserName,
   incrementStreak,
   applySnoozePenalty,
   completeProtocolItem,

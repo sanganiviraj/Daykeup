@@ -53,6 +53,12 @@
         </intent-filter>
       </receiver>
 
+      <!-- Keeps the alarm sound playing when the app is in the background or killed -->
+      <service
+        android:name=".alarm.AlarmRingService"
+        android:exported="false"
+        android:foregroundServiceType="mediaPlayback" />
+
       <!-- Re-schedule alarms after device reboot -->
       <receiver
         android:name=".alarm.BootReceiver"

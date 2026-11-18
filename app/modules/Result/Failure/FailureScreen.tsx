@@ -1,6 +1,6 @@
 import React, { FC, memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppIcon, AppText, SafeAreaContainer } from '../../../components';
 import { resultScreenString, Routes } from '../../../constants';
@@ -9,12 +9,14 @@ import { Colors } from '../../../theme/Colors';
 import { HERO_ICON_SIZE, styles } from './FailureScreenStyles';
 
 type FailureNavProp = NativeStackNavigationProp<RootStackParamList>;
+type FailureRouteProp = RouteProp<RootStackParamList, 'FailureScreen'>;
 
 const FailureScreen: FC = () => {
   const navigation = useNavigation<FailureNavProp>();
+  const route = useRoute<FailureRouteProp>();
 
   const handleRetry = () => {
-    navigation.replace(Routes.alarmRinging);
+    navigation.replace(Routes.alarmRinging, { alarmId: route.params?.alarmId });
   };
 
   return (

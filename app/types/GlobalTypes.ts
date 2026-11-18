@@ -6,6 +6,8 @@ export type ChallengeType =
   | 'hockey'
   | 'stack'
   | 'pong'
+  | 'truck'
+  | 'duel'
   | 'math'
   | 'memory'
   | 'pattern'
@@ -83,6 +85,8 @@ export interface AppTextProps {
   children?: ReactNode;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  adjustsFontSizeToFit?: boolean;
+  minimumFontScale?: number;
   accessible?: boolean;
   accessibilityLabel?: string;
   accessibilityRole?: 'header' | 'text' | 'link' | 'none';
@@ -122,7 +126,12 @@ export interface CountdownDialProps {
   size?: number;
 }
 
+export interface GameTimerBadgeProps {
+  remainingSeconds: number;
+}
+
 export type RootStackParamList = {
+  OnboardingScreen: undefined;
   HomeScreen: { initialTab?: 'main' | 'alarms' } | undefined;
   AlarmsScreen: undefined;
   CreateAlarmScreen: { alarmId?: string } | undefined;
@@ -133,7 +142,132 @@ export type RootStackParamList = {
   HockeyGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
   StackGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
   PongGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
+  TruckGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
+  DuelGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
   SuccessScreen: { earnedXp?: number; streak?: number } | undefined;
-  FailureScreen: { reason?: string } | undefined;
+  FailureScreen: { reason?: string; alarmId?: string } | undefined;
 };
+
+type OnboardingIconName = import('../components/app-icon/AppIcon').AppIconName;
+
+export type AgeBracket = '18-24' | '25-34' | '35-44' | '45+';
+export type WakeStyle = 'heavySleeper' | 'snoozer' | 'momentum';
+export type OnboardingMission = Extract<
+  ChallengeType,
+  'math' | 'memory' | 'knife' | 'hockey' | 'stack' | 'pong'
+>;
+
+export interface OnboardingState {
+  name: string;
+  ageBracket: AgeBracket;
+  wakeStyle: WakeStyle;
+  wakeMinutes: number; // minutes since midnight
+  repeatDays: number[]; // 0: Mon ... 6: Sun
+  mission: OnboardingMission;
+  difficulty: ChallengeDifficulty;
+  smartNotifications: boolean;
+}
+
+export interface OnboardingAgeOption {
+  key: AgeBracket;
+  label: string;
+}
+
+export interface OnboardingWakeStyleOption {
+  key: WakeStyle;
+  icon: OnboardingIconName;
+  title: string;
+  subtitle: string;
+  difficulty: ChallengeDifficulty;
+}
+
+export interface OnboardingMissionOption {
+  key: OnboardingMission;
+  tag: string;
+  sample: string;
+}
+
+export interface OnboardingFeatureOption {
+  icon: OnboardingIconName;
+  title: string;
+  subtitle: string;
+}
+
+export interface OnboardingFooterConfig {
+  title: string;
+  icon: OnboardingIconName;
+}
+
+export interface AnimatedEntranceProps {
+  children: ReactNode;
+  delay?: number;
+  offsetY?: number;
+  duration?: number;
+  style?: StyleProp<ViewStyle>;
+}
+
+export interface FloatingViewProps {
+  children: ReactNode;
+  amplitude?: number;
+  duration?: number;
+  style?: StyleProp<ViewStyle>;
+}
+
+export interface PulseDotProps {
+  color?: string;
+  size?: number;
+}
+
+export type InfoPillTone = 'amber' | 'purple' | 'white' | 'dark';
+
+export interface InfoPillProps {
+  text: string;
+  icon?: OnboardingIconName;
+  tone?: InfoPillTone;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+export interface OnboardingHeaderProps {
+  step: number;
+  totalSteps: number;
+  onBackPress: () => void;
+  onSkipPress: () => void;
+}
+
+export interface OnboardingFooterProps {
+  title: string;
+  iconName: OnboardingIconName;
+  onPress: () => void;
+  disabled?: boolean;
+  testID?: string;
+}
+
+export interface SelectionCheckProps {
+  selected: boolean;
+  size?: number;
+  style?: StyleProp<ViewStyle>;
+}
+
+export interface SelectableCardProps {
+  selected: boolean;
+  onPress: () => void;
+  children: ReactNode;
+  accessibilityLabel: string;
+  accessibilityRole?: 'radio' | 'button' | 'checkbox';
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
+  selectedBackgroundColor?: string;
+  unselectedBackgroundColor?: string;
+  selectedBorderColor?: string;
+  unselectedBorderColor?: string;
+  testID?: string;
+}
+
+export interface SegmentedControlProps {
+  options: readonly string[];
+  selectedIndex: number;
+  onChange: (index: number) => void;
+  testID?: string;
+}
 

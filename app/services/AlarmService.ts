@@ -11,6 +11,8 @@ export interface IPlatformAlarmService {
   cancelAlarm(alarmId: string): Promise<boolean>;
   triggerAlarmNow(alarmId: string, soundUri?: string, vibrate?: boolean): Promise<boolean>;
   stopAlarmSound(): Promise<boolean>;
+  pauseAlarmSound(): Promise<boolean>;
+  resumeAlarmSound(soundUri?: string, vibrate?: boolean): Promise<boolean>;
   pickRingtone(currentUri?: string): Promise<SoundPickerResult | null>;
   pickAudioFile(): Promise<SoundPickerResult | null>;
   playPreview(soundUri?: string): Promise<boolean>;
@@ -26,6 +28,8 @@ export interface IPlatformAlarmService {
   getDeviceBrand(): Promise<{ brand: string; manufacturer: string; isXiaomi: boolean }>;
   hasPromptedLockScreen(): Promise<boolean>;
   markPromptedLockScreen(): Promise<boolean>;
+  hasCompletedOnboarding(): Promise<boolean>;
+  markOnboardingCompleted(): Promise<boolean>;
   saveAllAlarms(alarms: AlarmItem[]): Promise<boolean>;
   getAllSavedAlarms(): Promise<AlarmItem[]>;
 }
@@ -88,6 +92,7 @@ class AndroidAlarmService implements IPlatformAlarmService {
           title,
           soundUri,
           vibrate,
+          alarm.repeatDays ?? [],
         );
         console.log(
           `[AndroidAlarmService] Scheduled native exact alarm ${alarm.id} at timestamp ${triggerTimestamp} (${alarm.hour}:${alarm.minute} ${alarm.period}), sound: ${alarm.soundTitle || 'default'}, vibrate: ${vibrate}`,
@@ -128,6 +133,7 @@ class AndroidAlarmService implements IPlatformAlarmService {
           'Dayekup Test Alarm',
           soundUri || null,
           vibrate,
+          [],
         );
         return true;
       }
@@ -145,6 +151,30 @@ class AndroidAlarmService implements IPlatformAlarmService {
       }
     } catch (e) {
       console.warn('[AndroidAlarmService] Failed to stop alarm sound:', e);
+    }
+    return false;
+  }
+
+  async pauseAlarmSound(): Promise<boolean> {
+    try {
+      if (this.nativeModule?.pauseAlarmSound) {
+        await this.nativeModule.pauseAlarmSound();
+        return true;
+      }
+    } catch (e) {
+      console.warn('[AndroidAlarmService] Failed to pause alarm sound:', e);
+    }
+    return false;
+  }
+
+  async resumeAlarmSound(soundUri?: string, vibrate: boolean = true): Promise<boolean> {
+    try {
+      if (this.nativeModule?.resumeAlarmSound) {
+        await this.nativeModule.resumeAlarmSound(soundUri || null, vibrate);
+        return true;
+      }
+    } catch (e) {
+      console.warn('[AndroidAlarmService] Failed to resume alarm sound:', e);
     }
     return false;
   }
@@ -340,6 +370,29 @@ class AndroidAlarmService implements IPlatformAlarmService {
     return false;
   }
 
+  async hasCompletedOnboarding(): Promise<boolean> {
+    try {
+      if (this.nativeModule?.hasCompletedOnboarding) {
+        return await this.nativeModule.hasCompletedOnboarding();
+      }
+    } catch (e) {
+      console.warn('[AndroidAlarmService] hasCompletedOnboarding error:', e);
+    }
+    return false;
+  }
+
+  async markOnboardingCompleted(): Promise<boolean> {
+    try {
+      if (this.nativeModule?.markOnboardingCompleted) {
+        await this.nativeModule.markOnboardingCompleted();
+        return true;
+      }
+    } catch (e) {
+      console.warn('[AndroidAlarmService] markOnboardingCompleted error:', e);
+    }
+    return false;
+  }
+
   async saveAllAlarms(alarms: AlarmItem[]): Promise<boolean> {
     try {
       if (this.nativeModule?.saveAlarmsJson) {
@@ -389,6 +442,14 @@ class IOSAlarmService implements IPlatformAlarmService {
   }
 
   async stopAlarmSound(): Promise<boolean> {
+    return true;
+  }
+
+  async pauseAlarmSound(): Promise<boolean> {
+    return true;
+  }
+
+  async resumeAlarmSound(): Promise<boolean> {
     return true;
   }
 
@@ -452,6 +513,17 @@ class IOSAlarmService implements IPlatformAlarmService {
     return true;
   }
 
+  private onboardingCompleted = false;
+
+  async hasCompletedOnboarding(): Promise<boolean> {
+    return this.onboardingCompleted;
+  }
+
+  async markOnboardingCompleted(): Promise<boolean> {
+    this.onboardingCompleted = true;
+    return true;
+  }
+
   private memoryAlarms: AlarmItem[] = [];
 
   async saveAllAlarms(alarms: AlarmItem[]): Promise<boolean> {
@@ -492,6 +564,14 @@ class AlarmManagerService {
 
   public async stopAlarmSound(): Promise<boolean> {
     return this.platformService.stopAlarmSound();
+  }
+
+  public async pauseAlarmSound(): Promise<boolean> {
+    return this.platformService.pauseAlarmSound();
+  }
+
+  public async resumeAlarmSound(soundUri?: string, vibrate?: boolean): Promise<boolean> {
+    return this.platformService.resumeAlarmSound(soundUri, vibrate);
   }
 
   public async pickRingtone(currentUri?: string): Promise<SoundPickerResult | null> {
@@ -552,6 +632,14 @@ class AlarmManagerService {
 
   public async markPromptedLockScreen(): Promise<boolean> {
     return this.platformService.markPromptedLockScreen();
+  }
+
+  public async hasCompletedOnboarding(): Promise<boolean> {
+    return this.platformService.hasCompletedOnboarding();
+  }
+
+  public async markOnboardingCompleted(): Promise<boolean> {
+    return this.platformService.markOnboardingCompleted();
   }
 
   public async saveAllAlarms(alarms: AlarmItem[]): Promise<boolean> {

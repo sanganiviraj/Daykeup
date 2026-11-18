@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import { Provider } from 'react-redux';
 import {
@@ -15,6 +15,21 @@ import { RootStackParamList } from './app/types';
 function App(): React.JSX.Element {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const isNavReady = useRef<boolean>(false);
+  const [initialRoute, setInitialRoute] = useState<
+    typeof Routes.home | typeof Routes.onboarding | null
+  >(null);
+
+  // First launch goes through onboarding. Anyone who already has alarms saved
+  // (installed before onboarding existed) skips it.
+  useEffect(() => {
+    Promise.all([
+      AlarmService.hasCompletedOnboarding(),
+      AlarmService.getAllSavedAlarms(),
+    ]).then(([completed, savedAlarms]) => {
+      const hasSavedAlarms = !!savedAlarms && savedAlarms.length > 0;
+      setInitialRoute(completed || hasSavedAlarms ? Routes.home : Routes.onboarding);
+    });
+  }, []);
 
   useEffect(() => {
     // 1. Request notifications, exact alarm, and battery exemption permissions on app start
@@ -66,7 +81,7 @@ function App(): React.JSX.Element {
         <NavigationContainer
           ref={navigationRef}
           onReady={handleNavReady}>
-          <RootStack />
+          {initialRoute ? <RootStack initialRouteName={initialRoute} /> : null}
         </NavigationContainer>
       </SafeAreaProvider>
     </Provider>

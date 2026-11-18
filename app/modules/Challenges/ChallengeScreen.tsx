@@ -1,6 +1,7 @@
 import React, { FC, memo, useEffect, useState, useRef } from 'react';
 import {
   Alert,
+  AppState,
   ScrollView,
   TouchableOpacity,
   View,
@@ -11,6 +12,7 @@ import {
   AppIcon,
   AppText,
   CountdownDial,
+  GameTimerBadge,
   CustomHeader,
   SafeAreaContainer,
 } from '../../components';
@@ -18,6 +20,8 @@ import KnifeThrowerGame from '../../components/games/knife-thrower/KnifeThrowerG
 import AirHockeyGame from '../../components/games/air-hockey/AirHockeyGame';
 import StackTowerGame from '../../components/games/stack-tower/StackTowerGame';
 import CurvePongGame from '../../components/games/curve-pong/CurvePongGame';
+import MonsterTruckGame from '../../components/games/monster-truck/MonsterTruckGame';
+import ShadowDuelGame from '../../components/games/shadow-duel/ShadowDuelGame';
 import {
   challengeScreenString,
   commonString,
@@ -60,6 +64,8 @@ const ChallengeScreen: FC = () => {
         'hockey',
         'stack',
         'pong',
+        'truck',
+        'duel',
         'math',
       ];
       return candidates[Math.floor(Math.random() * candidates.length)];
@@ -67,36 +73,65 @@ const ChallengeScreen: FC = () => {
     return rawChallengeType;
   });
 
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(TOTAL_SECONDS);
   const [challenge] = useState<MathChallenge>(() =>
     generateMathChallenge(),
   );
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // True once the challenge has ended for good (won, snoozed or timed out).
+  const finishedRef = useRef<boolean>(false);
+  const soundUri = currentAlarm?.soundUri;
+  const vibrate = currentAlarm?.vibrationEnabled !== false;
+
+  // The alarm stays silent while the player has their 30 seconds to win.
+  // Any other way of leaving the screen (back, app switch) brings the sound back.
+  useEffect(() => {
+    AlarmService.pauseAlarmSound();
+
+    const appStateSub = AppState.addEventListener('change', nextState => {
+      if (finishedRef.current) return;
+      if (nextState === 'active') {
+        AlarmService.pauseAlarmSound();
+      } else {
+        AlarmService.resumeAlarmSound(soundUri, vibrate);
+      }
+    });
+
+    return () => {
+      appStateSub.remove();
+      if (!finishedRef.current) {
+        AlarmService.resumeAlarmSound(soundUri, vibrate);
+      }
+    };
+  }, [soundUri, vibrate]);
 
   useEffect(() => {
-    if (challengeType === 'math') {
-      timerRef.current = setInterval(() => {
-        setRemainingSeconds(prev => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            navigation.replace(Routes.failure, {
-              reason: challengeScreenString.timeUpReason,
-            });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    timerRef.current = setInterval(() => {
+      setRemainingSeconds(prev => Math.max(0, prev - 1));
+    }, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [navigation, challengeType]);
+  }, []);
+
+  // Out of time: the alarm rings again until the challenge is won.
+  useEffect(() => {
+    if (remainingSeconds > 0 || finishedRef.current) return;
+    finishedRef.current = true;
+    if (timerRef.current) clearInterval(timerRef.current);
+    AlarmService.resumeAlarmSound(soundUri, vibrate);
+    navigation.replace(Routes.failure, {
+      reason: challengeScreenString.timeUpReason,
+      alarmId: currentAlarm?.id,
+    });
+  }, [remainingSeconds, navigation, soundUri, vibrate, currentAlarm?.id]);
 
   const handleGameSuccess = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
     dispatch(awardWakePoints(50));
     dispatch(incrementStreak());
@@ -144,6 +179,7 @@ const ChallengeScreen: FC = () => {
           text: challengeScreenString.snoozeConfirmBtn,
           style: 'destructive',
           onPress: () => {
+            finishedRef.current = true;
             if (timerRef.current) clearInterval(timerRef.current);
             AlarmService.stopAlarmSound();
             dispatch(applySnoozePenalty(50));
@@ -163,14 +199,17 @@ const ChallengeScreen: FC = () => {
           showBack={true}
           onBackPress={handleEmergencySnooze}
         />
-        <KnifeThrowerGame
-          totalKnives={7}
-          initialKnivesCount={1}
-          isAlarmMode={true}
-          onSuccess={handleGameSuccess}
-          onFailure={handleGameFailure}
-          onExit={handleEmergencySnooze}
-        />
+        <View style={styles.gameStage}>
+          <KnifeThrowerGame
+            totalKnives={7}
+            initialKnivesCount={1}
+            isAlarmMode={true}
+            onSuccess={handleGameSuccess}
+            onFailure={handleGameFailure}
+            onExit={handleEmergencySnooze}
+          />
+          <GameTimerBadge remainingSeconds={remainingSeconds} />
+        </View>
       </SafeAreaContainer>
     );
   }
@@ -184,13 +223,16 @@ const ChallengeScreen: FC = () => {
           showBack={true}
           onBackPress={handleEmergencySnooze}
         />
-        <AirHockeyGame
-          targetScore={2}
-          isAlarmMode={true}
-          onSuccess={handleGameSuccess}
-          onFailure={handleGameFailure}
-          onExit={handleEmergencySnooze}
-        />
+        <View style={styles.gameStage}>
+          <AirHockeyGame
+            targetScore={2}
+            isAlarmMode={true}
+            onSuccess={handleGameSuccess}
+            onFailure={handleGameFailure}
+            onExit={handleEmergencySnooze}
+          />
+          <GameTimerBadge remainingSeconds={remainingSeconds} />
+        </View>
       </SafeAreaContainer>
     );
   }
@@ -204,13 +246,16 @@ const ChallengeScreen: FC = () => {
           showBack={true}
           onBackPress={handleEmergencySnooze}
         />
-        <StackTowerGame
-          targetHeight={10}
-          isAlarmMode={true}
-          onSuccess={handleGameSuccess}
-          onFailure={handleGameFailure}
-          onExit={handleEmergencySnooze}
-        />
+        <View style={styles.gameStage}>
+          <StackTowerGame
+            targetHeight={10}
+            isAlarmMode={true}
+            onSuccess={handleGameSuccess}
+            onFailure={handleGameFailure}
+            onExit={handleEmergencySnooze}
+          />
+          <GameTimerBadge remainingSeconds={remainingSeconds} />
+        </View>
       </SafeAreaContainer>
     );
   }
@@ -224,13 +269,60 @@ const ChallengeScreen: FC = () => {
           showBack={true}
           onBackPress={handleEmergencySnooze}
         />
-        <CurvePongGame
-          targetScore={2}
-          isAlarmMode={true}
-          onSuccess={handleGameSuccess}
-          onFailure={handleGameFailure}
-          onExit={handleEmergencySnooze}
+        <View style={styles.gameStage}>
+          <CurvePongGame
+            targetScore={2}
+            isAlarmMode={true}
+            onSuccess={handleGameSuccess}
+            onFailure={handleGameFailure}
+            onExit={handleEmergencySnooze}
+          />
+          <GameTimerBadge remainingSeconds={remainingSeconds} />
+        </View>
+      </SafeAreaContainer>
+    );
+  }
+
+  // If Monster Truck Wake-up Quest
+  if (challengeType === 'truck') {
+    return (
+      <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+        <CustomHeader
+          title={gamesString.truckCardTitle}
+          showBack={true}
+          onBackPress={handleEmergencySnooze}
         />
+        <View style={styles.gameStage}>
+          <MonsterTruckGame
+            targetDistance={120}
+            isAlarmMode={true}
+            onSuccess={handleGameSuccess}
+            onExit={handleEmergencySnooze}
+          />
+          <GameTimerBadge remainingSeconds={remainingSeconds} />
+        </View>
+      </SafeAreaContainer>
+    );
+  }
+
+  // If Shadow Duel Wake-up Quest
+  if (challengeType === 'duel') {
+    return (
+      <SafeAreaContainer edges={['top', 'left', 'right', 'bottom']}>
+        <CustomHeader
+          title={gamesString.duelCardTitle}
+          showBack={true}
+          onBackPress={handleEmergencySnooze}
+        />
+        <View style={styles.gameStage}>
+          <ShadowDuelGame
+            enemyHp={70}
+            isAlarmMode={true}
+            onSuccess={handleGameSuccess}
+            onExit={handleEmergencySnooze}
+          />
+          <GameTimerBadge remainingSeconds={remainingSeconds} />
+        </View>
       </SafeAreaContainer>
     );
   }
