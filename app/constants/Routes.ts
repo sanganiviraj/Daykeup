@@ -5,7 +5,9 @@ const Routes = {
 
   // Screens
   onboarding: 'OnboardingScreen',
+  permissions: 'PermissionsScreen',
   home: 'HomeScreen',
+  profile: 'ProfileScreen',
   alarms: 'AlarmsScreen',
   createAlarm: 'CreateAlarmScreen',
   alarmRinging: 'AlarmRingingScreen',

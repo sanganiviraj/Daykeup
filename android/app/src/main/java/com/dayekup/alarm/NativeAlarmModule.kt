@@ -381,7 +381,7 @@ class NativeAlarmModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getInitialAlarm(promise: Promise) {
-        val id = pendingAlarmId
+        val id = if (AlarmAudioPlayer.isRinging()) pendingAlarmId else null
         if (id != null) {
             val map = Arguments.createMap().apply {
                 putString("alarmId", id)

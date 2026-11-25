@@ -59,6 +59,11 @@ export interface UserStats {
   xp: number;
   wakePoints: number;
   streak: number;
+  bestStreak: number;
+  // Local date (YYYY-MM-DD) tracking began; days before it are never "missed".
+  trackingSince?: string;
+  // Local dates (YYYY-MM-DD) on which the wake-up challenge was completed.
+  wakeHistory: Record<string, true>;
   wakeUpCompleted: boolean;
   challengeCompleted: boolean;
   morningGoalCompleted: boolean;
@@ -132,6 +137,7 @@ export interface GameTimerBadgeProps {
 
 export type RootStackParamList = {
   OnboardingScreen: undefined;
+  PermissionsScreen: undefined;
   HomeScreen: { initialTab?: 'main' | 'alarms' } | undefined;
   AlarmsScreen: undefined;
   CreateAlarmScreen: { alarmId?: string } | undefined;
@@ -146,6 +152,7 @@ export type RootStackParamList = {
   DuelGameScreen: { isWakeUpChallenge?: boolean; alarmId?: string } | undefined;
   SuccessScreen: { earnedXp?: number; streak?: number } | undefined;
   FailureScreen: { reason?: string; alarmId?: string } | undefined;
+  ProfileScreen: undefined;
 };
 
 type OnboardingIconName = import('../components/app-icon/AppIcon').AppIconName;

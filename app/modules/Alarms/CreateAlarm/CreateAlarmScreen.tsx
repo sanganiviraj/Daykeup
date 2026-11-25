@@ -1,6 +1,7 @@
 import React, { FC, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   Modal,
   ScrollView,
   TextInput,
@@ -31,7 +32,7 @@ import {
   ChallengeType,
   RootStackParamList,
 } from '../../../types';
-import { AlarmService } from '../../../services';
+import { AlarmService, PhotoService } from '../../../services';
 import {
   calculateRestDuration,
   formatTwoDigits,
@@ -123,6 +124,9 @@ const CreateAlarmScreen: FC = () => {
   );
   const [soundTitle, setSoundTitle] = useState<string>(
     editingAlarm?.soundTitle || createAlarmString.soundDefault,
+  );
+  const [photoUri, setPhotoUri] = useState<string | undefined>(
+    editingAlarm?.motivationalImage,
   );
   const [isPlayingPreview, setIsPlayingPreview] = useState<boolean>(false);
   const [isSoundModalVisible, setIsSoundModalVisible] = useState<boolean>(false);
@@ -246,6 +250,21 @@ const CreateAlarmScreen: FC = () => {
     }
   };
 
+  const handleChangePhoto = async () => {
+    const result = await PhotoService.pickAndStorePhoto();
+    if (result.status === 'error') {
+      Alert.alert(createAlarmString.photoErrorTitle, createAlarmString.photoErrorMsg);
+      return;
+    }
+    if (result.status === 'picked') {
+      // Drop a previously picked photo that was never saved with the alarm.
+      if (photoUri && photoUri !== editingAlarm?.motivationalImage) {
+        PhotoService.deleteStoredPhoto(photoUri);
+      }
+      setPhotoUri(result.uri);
+    }
+  };
+
   const executeSave = () => {
     AlarmService.stopPreview();
     const finalName = alarmName.trim() || createAlarmString.defaultAlarmName;
@@ -263,10 +282,15 @@ const CreateAlarmScreen: FC = () => {
       soundUri,
       soundTitle,
       vibrationEnabled,
+      motivationalImage: photoUri,
       motivationalQuote: createAlarmString.defaultQuote,
       createdAt: editingAlarm?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    if (editingAlarm?.motivationalImage && editingAlarm.motivationalImage !== photoUri) {
+      PhotoService.deleteStoredPhoto(editingAlarm.motivationalImage);
+    }
 
     dispatch(saveAlarm(alarmToSave));
     AlarmService.schedule(alarmToSave);
@@ -549,6 +573,7 @@ const CreateAlarmScreen: FC = () => {
             </AppText>
 
             <TouchableOpacity
+              onPress={handleChangePhoto}
               activeOpacity={0.7}
               accessible={true}
               accessibilityLabel={createAlarmString.changePhoto}
@@ -560,6 +585,13 @@ const CreateAlarmScreen: FC = () => {
           </View>
 
           <View style={styles.visionImageBox}>
+            {photoUri && (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.visionImage}
+                resizeMode="cover"
+              />
+            )}
             <View style={styles.visionImageOverlay} />
             <View style={styles.visionOverlayBottom}>
               <View>

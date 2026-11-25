@@ -58,7 +58,25 @@ export const styles = StyleSheet.create({
 
   // Streak Header
   streakHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: verticalScale(16),
+  },
+  profileButton: {
+    width: verticalScale(44),
+    height: verticalScale(44),
+    borderRadius: verticalScale(22),
+    backgroundColor: Colors.brandOrangeLight,
+    borderWidth: 1.5,
+    borderColor: Colors.creamBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileInitial: {
+    fontSize: moderateScale(18),
+    fontWeight: '800',
+    color: Colors.brandOrange,
   },
   streakLabelText: {
     fontSize: moderateScale(13),

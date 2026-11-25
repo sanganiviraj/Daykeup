@@ -23,3 +23,17 @@ jest.mock('lucide-react-native', () => {
     },
   );
 });
+
+jest.mock('react-native-image-picker', () => ({
+  launchImageLibrary: jest.fn(() => Promise.resolve({ didCancel: true })),
+}));
+
+jest.mock('react-native-fs', () => ({
+  DocumentDirectoryPath: '/mock-documents',
+  mkdir: jest.fn(() => Promise.resolve()),
+  copyFile: jest.fn(() => Promise.resolve()),
+  exists: jest.fn(() => Promise.resolve(false)),
+  unlink: jest.fn(() => Promise.resolve()),
+  readFile: jest.fn(() => Promise.resolve('{}')),
+  writeFile: jest.fn(() => Promise.resolve()),
+}));

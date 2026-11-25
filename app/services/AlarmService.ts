@@ -1,5 +1,14 @@
-import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
+import { Linking, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import { AlarmItem } from '../types';
+
+export type AlarmPermissionKey =
+  | 'notifications'
+  | 'exactAlarm'
+  | 'overlay'
+  | 'fullScreen'
+  | 'battery';
+
+export type AlarmPermissionStatus = Record<AlarmPermissionKey, boolean>;
 
 export interface SoundPickerResult {
   uri: string;
@@ -708,6 +717,100 @@ class AlarmManagerService {
     } catch (e) {
       console.warn('[AlarmService] Permission request exception:', e);
     }
+  }
+
+  /**
+   * Reports which of the permissions the alarm needs in order to ring reliably are granted.
+   */
+  public async getPermissionStatus(): Promise<AlarmPermissionStatus> {
+    const granted: AlarmPermissionStatus = {
+      notifications: true,
+      exactAlarm: true,
+      overlay: true,
+      fullScreen: true,
+      battery: true,
+    };
+    if (Platform.OS !== 'android') return granted;
+
+    try {
+      const nativeModule = NativeModules.NativeAlarmModule;
+      if (Platform.Version >= 33) {
+        granted.notifications = await PermissionsAndroid.check(
+          'android.permission.POST_NOTIFICATIONS' as Parameters<
+            typeof PermissionsAndroid.check
+          >[0],
+        );
+      }
+      if (nativeModule?.canScheduleExactAlarms) {
+        granted.exactAlarm = await nativeModule.canScheduleExactAlarms();
+      }
+      if (nativeModule?.canDrawOverlays) {
+        granted.overlay = await nativeModule.canDrawOverlays();
+      }
+      if (nativeModule?.canUseFullScreenIntent) {
+        granted.fullScreen = await nativeModule.canUseFullScreenIntent();
+      }
+      if (nativeModule?.checkBatteryOptimization) {
+        granted.battery = await nativeModule.checkBatteryOptimization();
+      }
+    } catch (e) {
+      console.warn('[AlarmService] getPermissionStatus error:', e);
+    }
+    return granted;
+  }
+
+  /**
+   * Asks for a single permission, opening the matching system screen when a dialog is not possible.
+   */
+  public async requestPermission(key: AlarmPermissionKey): Promise<void> {
+    if (Platform.OS !== 'android') return;
+
+    try {
+      const nativeModule = NativeModules.NativeAlarmModule;
+      switch (key) {
+        case 'notifications': {
+          const result = await PermissionsAndroid.request(
+            'android.permission.POST_NOTIFICATIONS' as Parameters<
+              typeof PermissionsAndroid.request
+            >[0],
+          );
+          if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+            await Linking.openSettings();
+          }
+          break;
+        }
+        case 'exactAlarm':
+          await nativeModule?.requestExactAlarmPermission?.();
+          break;
+        case 'overlay':
+          await nativeModule?.requestOverlayPermission?.();
+          break;
+        case 'fullScreen':
+          await nativeModule?.requestFullScreenIntentPermission?.();
+          break;
+        case 'battery':
+          await nativeModule?.requestIgnoreBatteryOptimization?.();
+          break;
+      }
+    } catch (e) {
+      console.warn('[AlarmService] requestPermission error:', e);
+    }
+  }
+
+  /**
+   * True when the permission setup screen has to be shown: something required is missing, or
+   * this is a Xiaomi device where the manual lock-screen steps were never walked through.
+   */
+  public async needsPermissionSetup(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+
+    const [status, brandInfo, prompted] = await Promise.all([
+      this.getPermissionStatus(),
+      this.getDeviceBrand(),
+      this.hasPromptedLockScreen(),
+    ]);
+    const allGranted = Object.values(status).every(Boolean);
+    return !allGranted || (Boolean(brandInfo?.isXiaomi) && !prompted);
   }
 
   /**

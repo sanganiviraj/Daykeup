@@ -67,6 +67,8 @@ export const createAlarmString = Object.freeze({
   everydayLabel: 'Every day',
   visionMotivationHeading: 'Photo & message',
   changePhoto: 'Change photo',
+  photoErrorTitle: 'Couldn\'t add photo',
+  photoErrorMsg: 'The photo could not be saved. Please try another one.',
   wakeUpIntention: 'Shown when the alarm rings',
   defaultQuote: '“Your future self is waiting.”',
   wakeUpChallengeHeading: 'Challenge',
@@ -209,6 +211,32 @@ export const lockScreenPermissionString = Object.freeze({
   whyNeededDesc:
     'Without this permission, the alarm rings audio in the background but your screen stays on the phone lock screen, forcing you to unlock your phone manually to stop it.',
   close: 'Close',
+});
+
+export const profileString = Object.freeze({
+  headerTitle: 'Profile',
+  openProfileAria: 'Open profile',
+  namePlaceholder: 'Add your name',
+  nameLabel: 'Your name',
+  editNameAria: 'Edit name',
+  saveNameAria: 'Save name',
+  levelLabel: 'Level',
+  xpToNext: 'XP to next level',
+  streakLabel: 'Streak',
+  bestStreakLabel: 'Best streak',
+  pointsLabel: 'Wake points',
+  wakeUpsLabel: 'Wake-ups',
+  activityTitle: 'Wake-up activity',
+  activitySubtitle: 'Every square is a day. Orange means you got up.',
+  legendMissed: 'Missed',
+  legendDone: 'Woke up',
+  legendToday: 'Today',
+  emptyTitle: 'Your first square is waiting',
+  emptySub: 'Finish a wake-up challenge and it lights up here.',
+  monthNames: Object.freeze([
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ]),
 });
 
 export const gamesString = Object.freeze({
@@ -366,4 +394,38 @@ export const onboardingString = Object.freeze({
   readyCta: 'Start Your Morning Journey',
   readyLaunching: 'Preparing Alarm...',
   readyFootnote: 'You can edit alarms, missions and sounds anytime from the Alarms tab.',
+});
+
+export const permissionsString = Object.freeze({
+  badge: 'One-time setup',
+  title: 'Let your alarm wake you up',
+  subtitle:
+    'An alarm that can be silenced by your phone is no alarm at all. Allow these so Dayekup rings on time and opens over your lock screen, even if the app was closed.',
+  subtitleXiaomi:
+    'Your phone aggressively stops background apps. Allow all of these, including the Xiaomi-only steps, or your alarm may not show up when it rings.',
+  statusAllowed: 'Allowed',
+  statusRequired: 'Required',
+  statusOpened: 'Opened',
+  allowBtn: 'Allow',
+  openBtn: 'Open',
+  continueBtn: 'Continue',
+  remainingHint: 'Allow every permission above to continue.',
+  xiaomiSection: 'Xiaomi / Redmi steps',
+  xiaomiHint:
+    'These can only be switched on by you in system settings. Tap Open, turn them on, then come back.',
+  notificationsTitle: 'Notifications',
+  notificationsDesc: 'Lets the alarm notification appear and ring.',
+  exactAlarmTitle: 'Alarms & reminders',
+  exactAlarmDesc: 'Lets the alarm fire at the exact minute you set.',
+  overlayTitle: 'Display over other apps',
+  overlayDesc: 'Lets the alarm screen open on top of whatever your phone is doing.',
+  fullScreenTitle: 'Full-screen alerts',
+  fullScreenDesc: 'Lets the alarm light up and take over your locked screen.',
+  batteryTitle: 'Unrestricted battery',
+  batteryDesc: 'Stops the system from putting Dayekup to sleep before it rings.',
+  lockScreenTitle: 'Lock screen & pop-up windows',
+  lockScreenDesc:
+    'Turn on "Show on Lock screen" and "Display pop-up windows while running in the background".',
+  autostartTitle: 'Autostart',
+  autostartDesc: 'Keeps the alarm working after you swipe Dayekup away from Recents.',
 });

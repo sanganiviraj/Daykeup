@@ -4,7 +4,9 @@ import { Routes } from '../../constants';
 import { RootStackParamList } from '../../types';
 
 import OnboardingScreen from '../../modules/Onboarding/OnboardingScreen';
+import PermissionsScreen from '../../modules/Permissions/PermissionsScreen';
 import HomeScreen from '../../modules/Home/HomeScreen';
+import ProfileScreen from '../../modules/Profile/ProfileScreen';
 import AlarmsScreen from '../../modules/Alarms/AlarmsList/AlarmsScreen';
 import CreateAlarmScreen from '../../modules/Alarms/CreateAlarm/CreateAlarmScreen';
 import AlarmRingingScreen from '../../modules/Alarms/AlarmRinging/AlarmRingingScreen';
@@ -22,7 +24,10 @@ import FailureScreen from '../../modules/Result/Failure/FailureScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 interface RootStackProps {
-  initialRouteName?: typeof Routes.home | typeof Routes.onboarding;
+  initialRouteName?:
+    | typeof Routes.home
+    | typeof Routes.onboarding
+    | typeof Routes.permissions;
 }
 
 const RootStack: FC<RootStackProps> = ({ initialRouteName = Routes.home }) => {
@@ -38,7 +43,13 @@ const RootStack: FC<RootStackProps> = ({ initialRouteName = Routes.home }) => {
         component={OnboardingScreen}
         options={{ animation: 'fade', gestureEnabled: false }}
       />
+      <Stack.Screen
+        name={Routes.permissions}
+        component={PermissionsScreen}
+        options={{ animation: 'fade', gestureEnabled: false }}
+      />
       <Stack.Screen name={Routes.home} component={HomeScreen} />
+      <Stack.Screen name={Routes.profile} component={ProfileScreen} />
       <Stack.Screen name={Routes.alarms} component={AlarmsScreen} />
       <Stack.Screen
         name={Routes.createAlarm}

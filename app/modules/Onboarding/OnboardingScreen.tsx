@@ -149,7 +149,7 @@ const OnboardingScreen: FC = () => {
       }
 
       AlarmService.markOnboardingCompleted();
-      navigation.reset({ index: 0, routes: [{ name: Routes.home }] });
+      navigation.reset({ index: 0, routes: [{ name: Routes.permissions }] });
     },
     [dispatch, existingAlarms, navigation, profile],
   );

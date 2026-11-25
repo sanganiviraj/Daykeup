@@ -1,0 +1,141 @@
+import { StyleSheet } from 'react-native';
+import { Colors } from '../../theme/Colors';
+import { horizontalScale, moderateScale, verticalScale } from '../../theme/Metrics';
+
+export const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: horizontalScale(20),
+    paddingTop: verticalScale(24),
+    paddingBottom: verticalScale(16),
+  },
+  iconBadge: {
+    width: verticalScale(56),
+    height: verticalScale(56),
+    borderRadius: verticalScale(28),
+    backgroundColor: Colors.brandOrangeLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: verticalScale(16),
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.brandOrangeLight,
+    paddingHorizontal: horizontalScale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: verticalScale(8),
+    marginBottom: verticalScale(10),
+  },
+  badgeText: {
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+    color: Colors.brandOrange,
+    letterSpacing: 0.5,
+  },
+  title: {
+    fontSize: moderateScale(24),
+    fontWeight: '800',
+    color: Colors.textDark,
+    marginBottom: verticalScale(8),
+  },
+  subtitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
+    color: Colors.textSecondary,
+    lineHeight: moderateScale(20),
+    marginBottom: verticalScale(20),
+  },
+  sectionTitle: {
+    fontSize: moderateScale(12),
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+    marginTop: verticalScale(8),
+    marginBottom: verticalScale(4),
+  },
+  sectionHint: {
+    fontSize: moderateScale(12),
+    fontWeight: '400',
+    color: Colors.onSurfaceVariant,
+    lineHeight: moderateScale(17),
+    marginBottom: verticalScale(12),
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.brandCreamLight,
+    borderWidth: 1,
+    borderColor: Colors.creamBorder,
+    borderRadius: verticalScale(16),
+    paddingHorizontal: horizontalScale(14),
+    paddingVertical: verticalScale(12),
+    marginBottom: verticalScale(10),
+  },
+  rowDone: {
+    backgroundColor: Colors.surfaceContainer,
+    borderColor: Colors.borderSubtle,
+  },
+  rowIcon: {
+    width: verticalScale(40),
+    height: verticalScale(40),
+    borderRadius: verticalScale(20),
+    backgroundColor: Colors.brandOrangeLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: horizontalScale(12),
+  },
+  rowIconDone: {
+    backgroundColor: Colors.success,
+  },
+  rowText: {
+    flex: 1,
+    marginRight: horizontalScale(10),
+  },
+  rowTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: Colors.textDark,
+    marginBottom: verticalScale(2),
+  },
+  rowDesc: {
+    fontSize: moderateScale(12),
+    fontWeight: '400',
+    color: Colors.textMuted,
+    lineHeight: moderateScale(16),
+  },
+  actionBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: horizontalScale(16),
+    paddingVertical: verticalScale(8),
+    borderRadius: verticalScale(12),
+  },
+  actionBtnText: {
+    fontSize: moderateScale(13),
+    fontWeight: '800',
+    color: Colors.white,
+  },
+  doneText: {
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+    color: Colors.success,
+  },
+  footer: {
+    paddingHorizontal: horizontalScale(20),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(20),
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderSubtle,
+    backgroundColor: Colors.white,
+  },
+  footerHint: {
+    fontSize: moderateScale(12),
+    fontWeight: '500',
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginBottom: verticalScale(10),
+  },
+  continueBtn: {
+    backgroundColor: Colors.primary,
+    height: verticalScale(52),
+    borderRadius: verticalScale(16),
+  },
+});

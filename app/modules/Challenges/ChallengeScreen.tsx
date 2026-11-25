@@ -32,12 +32,16 @@ import { useAppDispatch, useAppSelector } from '../../hooks';
 import { AlarmService } from '../../services';
 import {
   awardWakePoints,
-  incrementStreak,
+  recordWakeUp,
   applySnoozePenalty,
   completeProtocolItem,
 } from '../../redux';
 import { ChallengeType, MathChallenge, RootStackParamList } from '../../types';
-import { generateMathChallenge } from '../../utils';
+import {
+  computeStreak,
+  generateMathChallenge,
+  toDateKey,
+} from '../../utils';
 import { Colors } from '../../theme/Colors';
 import { styles } from './ChallengeScreenStyles';
 
@@ -134,7 +138,8 @@ const ChallengeScreen: FC = () => {
     finishedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
     dispatch(awardWakePoints(50));
-    dispatch(incrementStreak());
+    const todayKey = toDateKey();
+    dispatch(recordWakeUp(todayKey));
     dispatch(completeProtocolItem('wakeUp'));
     dispatch(completeProtocolItem('challenge'));
     AlarmService.stopAlarmSound();
@@ -142,7 +147,7 @@ const ChallengeScreen: FC = () => {
     setTimeout(() => {
       navigation.replace(Routes.success, {
         earnedXp: 50,
-        streak: userStats.streak + 1,
+        streak: computeStreak({ ...userStats.wakeHistory, [todayKey]: true }, todayKey),
       });
     }, 300);
   };

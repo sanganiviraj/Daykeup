@@ -25,3 +25,4 @@ export { default as StackTowerGame } from './games/stack-tower/StackTowerGame';
 export { default as CurvePongGame } from './games/curve-pong/CurvePongGame';
 export { default as MonsterTruckGame } from './games/monster-truck/MonsterTruckGame';
 export { default as ShadowDuelGame } from './games/shadow-duel/ShadowDuelGame';
+export { default as WakeHeatmap } from './wake-heatmap/WakeHeatmap';

@@ -139,11 +139,44 @@ export const formatRepeatDays = (repeatDays: number[] = []): string => {
 
 export interface WeekDay {
   key: string;
+  dateKey: string;
   label: string;
   date: number;
   isToday: boolean;
   isPast: boolean;
 }
+
+const pad2 = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
+
+// Local calendar date as YYYY-MM-DD (never UTC, so late-night wakes land on the right day).
+export const toDateKey = (date: Date = new Date()): string =>
+  `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+
+export const fromDateKey = (key: string): Date => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+export const shiftDateKey = (key: string, days: number): string => {
+  const date = fromDateKey(key);
+  date.setDate(date.getDate() + days);
+  return toDateKey(date);
+};
+
+// Consecutive completed days ending today. If today isn't done yet the streak
+// is still alive when yesterday was, and it drops to 0 once a day is skipped.
+export const computeStreak = (
+  history: Record<string, true>,
+  todayKey: string = toDateKey(),
+): number => {
+  let cursor = history[todayKey] ? todayKey : shiftDateKey(todayKey, -1);
+  let count = 0;
+  while (history[cursor]) {
+    count += 1;
+    cursor = shiftDateKey(cursor, -1);
+  }
+  return count;
+};
 
 // Monday-first list of the current week's days
 export const getCurrentWeek = (today: Date = new Date()): WeekDay[] => {
@@ -156,6 +189,7 @@ export const getCurrentWeek = (today: Date = new Date()): WeekDay[] => {
     day.setDate(monday.getDate() + index);
     return {
       key: label.toLowerCase(),
+      dateKey: toDateKey(day),
       label,
       date: day.getDate(),
       isToday: index === mondayOffset,
