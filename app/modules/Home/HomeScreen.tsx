@@ -23,6 +23,7 @@ import {
   challengeNames,
   commonString,
   homeScreenString,
+  profileString,
   Routes,
 } from '../../constants';
 import { useAppDispatch, useAppSelector } from '../../hooks';
@@ -30,7 +31,7 @@ import { toggleAlarm } from '../../redux';
 import { AlarmService } from '../../services';
 import { RootStackParamList } from '../../types';
 import { Colors } from '../../theme/Colors';
-import { formatRepeatDays, getCurrentWeek } from '../../utils';
+import { computeStreak, formatRepeatDays, getCurrentWeek } from '../../utils';
 import { BottomTabType } from '../../components/bottom-navigation/BottomNavigation';
 import { EMPTY_ICON_SIZE, styles } from './HomeScreenStyles';
 
@@ -53,9 +54,10 @@ const HomeScreen: FC = () => {
   }, [route.params?.initialTab]);
 
   const alarms = useAppSelector(state => state.alarm.alarms);
-  const streak = useAppSelector(state => state.gamification.userStats.streak);
+  const userName = useAppSelector(state => state.gamification.userStats.name);
+  const wakeHistory = useAppSelector(state => state.gamification.userStats.wakeHistory);
+  const streak = useMemo(() => computeStreak(wakeHistory), [wakeHistory]);
   const week = useMemo(() => getCurrentWeek(), []);
-  const todayIndex = week.findIndex(day => day.isToday);
   const activeCount = alarms.filter(a => a.enabled).length;
 
   const primaryAlarm = alarms[0];
@@ -210,24 +212,41 @@ const HomeScreen: FC = () => {
 
             {/* Streak Header */}
             <View style={styles.streakHeaderRow}>
-              <AppText style={styles.streakLabelText}>
-                {homeScreenString.streakLabel}
-              </AppText>
-              <View style={styles.streakValueRow}>
-                <AppText style={styles.streakDaysTitle}>{streak}</AppText>
-                <AppText style={styles.streakDaysUnit}>
-                  {streak === 1
-                    ? homeScreenString.dayUnit
-                    : homeScreenString.daysUnit}
+              <View>
+                <AppText style={styles.streakLabelText}>
+                  {homeScreenString.streakLabel}
                 </AppText>
+                <View style={styles.streakValueRow}>
+                  <AppText style={styles.streakDaysTitle}>{streak}</AppText>
+                  <AppText style={styles.streakDaysUnit}>
+                    {streak === 1
+                      ? homeScreenString.dayUnit
+                      : homeScreenString.daysUnit}
+                  </AppText>
+                </View>
               </View>
+
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => navigation.navigate(Routes.profile)}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityLabel={profileString.openProfileAria}
+                accessibilityRole="button">
+                {userName ? (
+                  <AppText style={styles.profileInitial}>
+                    {userName.trim().charAt(0).toUpperCase()}
+                  </AppText>
+                ) : (
+                  <AppIcon name="user" size="md" color={Colors.brandOrange} />
+                )}
+              </TouchableOpacity>
             </View>
 
             {/* Weekly Calendar Strip (current week; past days inside the streak get a flame) */}
             <View style={styles.weeklyCalendarStrip}>
               {week.map((day, index) => {
-                const isStreakDay =
-                  day.isPast && todayIndex - index <= streak;
+                const isStreakDay = Boolean(wakeHistory[day.dateKey]);
                 return (
                   <View key={day.key} style={styles.calendarDayCol}>
                     <AppText

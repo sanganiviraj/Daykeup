@@ -44,6 +44,20 @@ const GAMES = [
     title: gamesString.pongCardTitle,
     desc: gamesString.pongCardDesc,
   },
+  {
+    key: 'truck',
+    route: Routes.truckGame,
+    icon: challengeIcons.truck,
+    title: gamesString.truckCardTitle,
+    desc: gamesString.truckCardDesc,
+  },
+  {
+    key: 'duel',
+    route: Routes.duelGame,
+    icon: challengeIcons.duel,
+    title: gamesString.duelCardTitle,
+    desc: gamesString.duelCardDesc,
+  },
 ] as const;
 
 const GamesHubScreen: FC = () => {

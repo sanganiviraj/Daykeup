@@ -10,7 +10,8 @@ data class StoredAlarm(
     val triggerTime: Long,
     val title: String,
     val soundUri: String? = null,
-    val vibrate: Boolean = true
+    val vibrate: Boolean = true,
+    val repeatDays: List<Int> = emptyList()
 )
 
 object AlarmStorage {
@@ -34,6 +35,9 @@ object AlarmStorage {
         saveList(context, alarms)
     }
 
+    fun getAlarm(context: Context, alarmId: String): StoredAlarm? =
+        getAllAlarms(context).firstOrNull { it.id == alarmId }
+
     fun getAllAlarms(context: Context): List<StoredAlarm> {
         val jsonString = getPrefs(context).getString(KEY_ALARMS, null) ?: return emptyList()
         val result = mutableListOf<StoredAlarm>()
@@ -47,7 +51,10 @@ object AlarmStorage {
                         triggerTime = obj.getLong("triggerTime"),
                         title = obj.optString("title", "Dayekup Wake Up"),
                         soundUri = if (obj.has("soundUri") && !obj.isNull("soundUri")) obj.getString("soundUri") else null,
-                        vibrate = obj.optBoolean("vibrate", true)
+                        vibrate = obj.optBoolean("vibrate", true),
+                        repeatDays = obj.optJSONArray("repeatDays")?.let { arr ->
+                            (0 until arr.length()).map { arr.getInt(it) }
+                        } ?: emptyList()
                     )
                 )
             }
@@ -68,6 +75,7 @@ object AlarmStorage {
                 obj.put("soundUri", item.soundUri)
             }
             obj.put("vibrate", item.vibrate)
+            obj.put("repeatDays", JSONArray(item.repeatDays))
             jsonArray.put(obj)
         }
         getPrefs(context).edit().putString(KEY_ALARMS, jsonArray.toString()).apply()

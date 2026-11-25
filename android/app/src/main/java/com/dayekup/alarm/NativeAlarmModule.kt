@@ -17,6 +17,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
@@ -82,66 +83,25 @@ class NativeAlarmModule(private val reactContext: ReactApplicationContext) :
         title: String,
         soundUri: String?,
         vibrate: Boolean,
+        repeatDays: ReadableArray?,
         promise: Promise
     ) {
         try {
-            val alarmManager = reactContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-            if (alarmManager == null) {
-                promise.reject("ERR_NO_ALARM_MGR", "AlarmManager not available")
-                return
+            val days = mutableListOf<Int>()
+            if (repeatDays != null) {
+                for (i in 0 until repeatDays.size()) days.add(repeatDays.getInt(i))
             }
 
-            val triggerTimeMs = triggerTimestamp.toLong()
+            // Persisted so the alarm survives reboots and app kills, and so a repeating alarm
+            // can re-arm its next day natively after it fires.
+            val alarm = StoredAlarm(alarmId, triggerTimestamp.toLong(), title, soundUri, vibrate, days)
+            AlarmStorage.saveAlarm(reactContext, alarm)
 
-            // Save alarm in persistent storage so it survives reboots and app kills
-            AlarmStorage.saveAlarm(
-                reactContext,
-                StoredAlarm(alarmId, triggerTimeMs, title, soundUri, vibrate)
-            )
-
-            // 1. Direct Activity Intent:
-            // Using PendingIntent.getActivity directly starts MainActivity over the lockscreen
-            // even if the app was killed/swiped away, completely bypassing BroadcastQueue restrictions!
-            val fullScreenIntent = Intent(reactContext, com.dayekup.MainActivity::class.java).apply {
-                action = "com.dayekup.ACTION_ALARM_FULLSCREEN"
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_INCLUDE_STOPPED_PACKAGES
-                )
-                putExtra("ALARM_TRIGGERED", true)
-                putExtra("ALARM_ID", alarmId)
-                putExtra("ALARM_TITLE", title)
-                putExtra("ALARM_SOUND_URI", soundUri)
-                putExtra("ALARM_VIBRATE", vibrate)
-            }
-
-            val pendingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            if (AlarmScheduler.schedule(reactContext, alarm)) {
+                promise.resolve(true)
             } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
+                promise.reject("ERR_SCHEDULE_FAILED", "AlarmManager could not schedule the alarm")
             }
-
-            val activityPendingIntent = PendingIntent.getActivity(
-                reactContext,
-                alarmId.hashCode(),
-                fullScreenIntent,
-                pendingFlags
-            )
-
-            val showIntent = Intent(reactContext, com.dayekup.MainActivity::class.java)
-            val showPendingIntent = PendingIntent.getActivity(
-                reactContext,
-                alarmId.hashCode() + 1,
-                showIntent,
-                pendingFlags
-            )
-
-            val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMs, showPendingIntent)
-            alarmManager.setAlarmClock(alarmClockInfo, activityPendingIntent)
-
-            promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("ERR_SCHEDULE_FAILED", e.message, e)
         }
@@ -196,6 +156,28 @@ class NativeAlarmModule(private val reactContext: ReactApplicationContext) :
             promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("ERR_STOP_SOUND", e.message, e)
+        }
+    }
+
+    // Silences the ringing alarm without cancelling it: the notification and service stay alive
+    // so the sound can be resumed if the wake-up challenge is not finished in time.
+    @ReactMethod
+    fun pauseAlarmSound(promise: Promise) {
+        try {
+            AlarmAudioPlayer.stop()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("ERR_PAUSE_SOUND", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun resumeAlarmSound(soundUri: String?, vibrate: Boolean, promise: Promise) {
+        try {
+            AlarmAudioPlayer.start(reactContext, soundUri, vibrate)
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("ERR_RESUME_SOUND", e.message, e)
         }
     }
 
@@ -399,7 +381,7 @@ class NativeAlarmModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getInitialAlarm(promise: Promise) {
-        val id = pendingAlarmId
+        val id = if (AlarmAudioPlayer.isRinging()) pendingAlarmId else null
         if (id != null) {
             val map = Arguments.createMap().apply {
                 putString("alarmId", id)
@@ -619,6 +601,19 @@ class NativeAlarmModule(private val reactContext: ReactApplicationContext) :
     fun markPromptedLockScreen(promise: Promise) {
         val prefs = reactContext.getSharedPreferences("DayekupPrefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("has_prompted_lockscreen", true).apply()
+        promise.resolve(true)
+    }
+
+    @ReactMethod
+    fun hasCompletedOnboarding(promise: Promise) {
+        val prefs = reactContext.getSharedPreferences("DayekupPrefs", Context.MODE_PRIVATE)
+        promise.resolve(prefs.getBoolean("has_completed_onboarding", false))
+    }
+
+    @ReactMethod
+    fun markOnboardingCompleted(promise: Promise) {
+        val prefs = reactContext.getSharedPreferences("DayekupPrefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("has_completed_onboarding", true).apply()
         promise.resolve(true)
     }
 

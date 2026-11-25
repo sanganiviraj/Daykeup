@@ -94,7 +94,9 @@ class MainActivity : ReactActivity() {
       } catch (_: Exception) {}
 
       // 1. Start audio and vibration immediately
-      AlarmAudioPlayer.start(this, soundUri, vibrate)
+      if (!AlarmAudioPlayer.isRinging()) {
+        AlarmAudioPlayer.start(this, soundUri, vibrate)
+      }
 
       // 2. Post high-priority alarm notification
       AlarmReceiver.showAlarmNotification(this, alarmId, alarmTitle, soundUri, vibrate)

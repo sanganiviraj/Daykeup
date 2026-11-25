@@ -182,6 +182,9 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: verticalScale(12),
   },
+  visionImage: {
+    ...StyleSheet.absoluteFill,
+  },
   visionImageOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',

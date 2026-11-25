@@ -28,6 +28,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 val notificationManager =
                     context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                 notificationManager?.cancel(NOTIFICATION_ID)
+                context.stopService(Intent(context, AlarmRingService::class.java))
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -72,6 +73,19 @@ class AlarmReceiver : BroadcastReceiver() {
             soundUri: String?,
             vibrate: Boolean
         ) {
+            val notification = buildAlarmNotification(context, alarmId, alarmTitle, soundUri, vibrate)
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            notificationManager?.notify(NOTIFICATION_ID, notification)
+        }
+
+        fun buildAlarmNotification(
+            context: Context,
+            alarmId: String,
+            alarmTitle: String,
+            soundUri: String?,
+            vibrate: Boolean
+        ): Notification {
             createNotificationChannel(context)
 
             val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
@@ -119,9 +133,61 @@ class AlarmReceiver : BroadcastReceiver() {
                 Notification.FLAG_INSISTENT or
                 Notification.FLAG_ONGOING_EVENT
 
-            val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            notificationManager?.notify(NOTIFICATION_ID, notification)
+            return notification
+        }
+
+        // Wakes the screen, starts sound + vibration, tells React Native and tries to open the app.
+        fun ringAlarm(
+            context: Context,
+            alarmId: String,
+            alarmTitle: String,
+            soundUri: String?,
+            vibrate: Boolean
+        ) {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+
+            @Suppress("DEPRECATION")
+            val screenWakeLock = powerManager?.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                PowerManager.ON_AFTER_RELEASE,
+                "Dayekup:ScreenTurnOnWakeLock"
+            )
+            screenWakeLock?.acquire(60_000)
+
+            val cpuWakeLock = powerManager?.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "Dayekup:AlarmCpuWakeLock"
+            )
+            cpuWakeLock?.acquire(3 * 60 * 1000L)
+
+            AlarmAudioPlayer.start(context, soundUri, vibrate)
+
+            NativeAlarmModule.setPendingAlarmLaunch(alarmId)
+            NativeAlarmModule.emitAlarmTrigger(alarmId, alarmTitle)
+
+            showAlarmNotification(context, alarmId, alarmTitle, soundUri, vibrate)
+
+            val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
+                action = "com.dayekup.ACTION_ALARM_FULLSCREEN"
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_INCLUDE_STOPPED_PACKAGES
+                )
+                putExtra("ALARM_TRIGGERED", true)
+                putExtra("ALARM_ID", alarmId)
+                putExtra("ALARM_TITLE", alarmTitle)
+                putExtra("ALARM_SOUND_URI", soundUri)
+                putExtra("ALARM_VIBRATE", vibrate)
+            }
+
+            try {
+                context.startActivity(fullScreenIntent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -131,55 +197,29 @@ class AlarmReceiver : BroadcastReceiver() {
         val soundUri = intent.getStringExtra("ALARM_SOUND_URI")
         val vibrate = intent.getBooleanExtra("ALARM_VIBRATE", true)
 
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-
-        // 1. HARDWARE SCREEN WAKE LOCK: Physically forces display to turn ON from sleep/lock state
-        @Suppress("DEPRECATION")
-        val screenWakeLock = powerManager?.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
-            PowerManager.ACQUIRE_CAUSES_WAKEUP or
-            PowerManager.ON_AFTER_RELEASE,
-            "Dayekup:ScreenTurnOnWakeLock"
-        )
-        screenWakeLock?.acquire(60_000)
-
-        // 2. PARTIAL WAKE LOCK: Keep CPU alive
-        val cpuWakeLock = powerManager?.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "Dayekup:AlarmCpuWakeLock"
-        )
-        cpuWakeLock?.acquire(3 * 60 * 1000L)
-
-        // 3. Start audio playback and vibration
-        AlarmAudioPlayer.start(context, soundUri, vibrate)
-
-        // 4. Update NativeAlarmModule
-        NativeAlarmModule.setPendingAlarmLaunch(alarmId)
-        NativeAlarmModule.emitAlarmTrigger(alarmId, alarmTitle)
-
-        // 5. Post notification
-        showAlarmNotification(context, alarmId, alarmTitle, soundUri, vibrate)
-
-        // 6. Launch MainActivity directly
-        val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.dayekup.ACTION_ALARM_FULLSCREEN"
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_INCLUDE_STOPPED_PACKAGES
-            )
-            putExtra("ALARM_TRIGGERED", true)
-            putExtra("ALARM_ID", alarmId)
-            putExtra("ALARM_TITLE", alarmTitle)
-            putExtra("ALARM_SOUND_URI", soundUri)
-            putExtra("ALARM_VIBRATE", vibrate)
-        }
-
+        // Arm tomorrow's (or the next selected day's) alarm first, so a repeating alarm keeps
+        // working even if the app is never opened after this one rings.
         try {
-            context.startActivity(fullScreenIntent)
+            AlarmStorage.getAlarm(context, alarmId)?.let { stored ->
+                if (stored.repeatDays.isNotEmpty()) AlarmScheduler.rearmRepeating(context, stored)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+
+        // The alarm broadcast runs even when the app is backgrounded or killed. A foreground
+        // service keeps the sound playing; if it cannot start, ring directly from the receiver.
+        try {
+            val serviceIntent = Intent(context, AlarmRingService::class.java).apply {
+                putExtra("ALARM_ID", alarmId)
+                putExtra("ALARM_TITLE", alarmTitle)
+                putExtra("ALARM_SOUND_URI", soundUri)
+                putExtra("ALARM_VIBRATE", vibrate)
+            }
+            context.startForegroundService(serviceIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ringAlarm(context, alarmId, alarmTitle, soundUri, vibrate)
         }
     }
 }

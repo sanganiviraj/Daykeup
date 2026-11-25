@@ -61,7 +61,31 @@ export type ColorType =
   | 'surfaceContainerHigh'
   | 'textDark'
   | 'tagGold'
-  | 'tagGoldText';
+  | 'tagGoldText'
+  // Onboarding Tokens
+  | 'onboardingBg'
+  | 'onboardingInk'
+  | 'onboardingBody'
+  | 'onboardingTrack'
+  | 'onboardingSurfaceLow'
+  | 'onboardingStageStart'
+  | 'onboardingStageEnd'
+  | 'brandBrown'
+  | 'amberSoft'
+  | 'amberTint'
+  | 'peach'
+  | 'whiteGlass'
+  | 'orangeGlow'
+  | 'purpleGlow'
+  | 'inkScrim'
+  | 'darkGoldText'
+  | 'tertiaryContainerSoft'
+  | 'tertiaryFixed'
+  | 'onTertiaryContainer'
+  | 'secondaryBrown'
+  | 'secondaryContainerSoft'
+  | 'secondaryFixed'
+  | 'onSecondaryFixedVariant';
 
 export const Colors: Record<ColorType, string> = {
   azure: '#067FF2',
@@ -128,4 +152,29 @@ export const Colors: Record<ColorType, string> = {
   textDark: '#221914',
   tagGold: '#2E1500',
   tagGoldText: '#8C5208',
+
+  // Onboarding Tokens
+  onboardingBg: '#FFF7FC',
+  onboardingInk: '#26162E',
+  onboardingBody: '#534438',
+  onboardingTrack: '#F2DAF8',
+  onboardingSurfaceLow: '#FEEFFF',
+  onboardingStageStart: '#130919',
+  onboardingStageEnd: '#1A0A24',
+  brandBrown: '#904D00',
+  amberSoft: '#FDD79E',
+  amberTint: '#FFF1DE',
+  peach: '#FFDCC3',
+  whiteGlass: '#FFFFFFE6',
+  orangeGlow: '#FF9E4440',
+  purpleGlow: '#804A8A55',
+  inkScrim: '#00000099',
+  darkGoldText: '#FFE3B8',
+  tertiaryContainerSoft: '#DA9CE34D',
+  tertiaryFixed: '#FDD6FF',
+  onTertiaryContainer: '#632F6E',
+  secondaryBrown: '#755A2C',
+  secondaryContainerSoft: '#FDD79E80',
+  secondaryFixed: '#FFDEAD',
+  onSecondaryFixedVariant: '#5B4216',
 };

@@ -3,6 +3,9 @@ import { Colors } from '../../theme/Colors';
 import { verticalScale, horizontalScale, moderateScale } from '../../theme/Metrics';
 
 export const styles = StyleSheet.create({
+  gameStage: {
+    flex: 1,
+  },
   contentContainer: {
     paddingHorizontal: horizontalScale(20),
     paddingBottom: verticalScale(32),

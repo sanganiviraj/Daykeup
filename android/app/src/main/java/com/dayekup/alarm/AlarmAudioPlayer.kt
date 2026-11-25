@@ -26,6 +26,9 @@ object AlarmAudioPlayer {
     private var previewRingtone: Ringtone? = null
 
     @Synchronized
+    fun isRinging(): Boolean = mediaPlayer != null || fallbackRingtone != null
+
+    @Synchronized
     fun start(context: Context, soundUriString: String? = null, vibrate: Boolean = true) {
         stop()
 

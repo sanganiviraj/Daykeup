@@ -6,7 +6,7 @@ import alarmReducer, {
 } from '../app/redux/slices/alarm-slice/AlarmSlice';
 import gamificationReducer, {
   awardWakePoints,
-  incrementStreak,
+  recordWakeUp,
   applySnoozePenalty,
   completeProtocolItem,
 } from '../app/redux/slices/gamification-slice/GamificationSlice';
@@ -96,6 +96,8 @@ describe('Gamification Redux Slice', () => {
       xp: 1240,
       wakePoints: 1240,
       streak: 7,
+      bestStreak: 7,
+      wakeHistory: {},
       wakeUpCompleted: false,
       challengeCompleted: false,
       morningGoalCompleted: false,
@@ -110,10 +112,23 @@ describe('Gamification Redux Slice', () => {
     expect(nextState.userStats.level).toBe(15);
   });
 
-  it('increments streak upon challenge solve', () => {
-    const nextState = gamificationReducer(initialUserState, incrementStreak());
+  it('records a wake-up and builds a streak across consecutive days', () => {
+    let state = gamificationReducer(initialUserState, recordWakeUp('2026-03-01'));
+    state = gamificationReducer(state, recordWakeUp('2026-03-02'));
 
-    expect(nextState.userStats.streak).toBe(8);
+    expect(state.userStats.streak).toBe(2);
+    expect(state.userStats.bestStreak).toBe(7);
+    expect(state.userStats.trackingSince).toBe('2026-03-01');
+  });
+
+  it('does not double count a day and restarts the streak after a gap', () => {
+    let state = gamificationReducer(initialUserState, recordWakeUp('2026-03-01'));
+    state = gamificationReducer(state, recordWakeUp('2026-03-01'));
+    expect(state.userStats.streak).toBe(1);
+
+    state = gamificationReducer(state, recordWakeUp('2026-03-04'));
+    expect(state.userStats.streak).toBe(1);
+    expect(Object.keys(state.userStats.wakeHistory)).toHaveLength(2);
   });
 
   it('deducts penalty upon emergency snooze', () => {
@@ -139,6 +154,14 @@ describe('AlarmService Integration', () => {
 
     const cleared = await AlarmService.clearInitialAlarm();
     expect(cleared).toBe(true);
+  });
+
+  it('silences the alarm during the challenge and brings it back if time runs out', async () => {
+    const paused = await AlarmService.pauseAlarmSound();
+    expect(paused).toBe(true);
+
+    const resumed = await AlarmService.resumeAlarmSound('content://media/alarm.mp3', true);
+    expect(resumed).toBe(true);
   });
 
   it('supports sound preview playback and stopping', async () => {
